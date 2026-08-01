@@ -349,8 +349,8 @@ const MOCK_REFERRALS: BackendReferral[] = [
     gender: 'Female',
     phc: 'Demo Rural PHC',
     timestamp: Date.now() - 15 * 60 * 1000,
-    riskScore: 18,
-    riskLevel: 'URGENT',
+    riskScore: 4,
+    riskLevel: 'WATCH',
     vitals: {
       heartRate: 115,
       spO2: 92,
@@ -630,7 +630,7 @@ export async function dismissObservation(referralId: string, observationId: stri
 export async function createReferral(patient: Patient, caregiverFlags: string[] = ['Breathing harder']): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
   const patientToken = `${patient.patientId || 'patient'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const newRaw: BackendReferral = {
-    id: patient.referralRef || `REF-2024-${Math.floor(100 + Math.random() * 900)}`,
+    id: patient.referralRef || patient.patientId,
     patientId: patient.patientId,
     patientName: patient.patientName,
     age: patient.age || 50,

@@ -365,19 +365,21 @@ async function rerouteReferral(referralId, newHospital, payload = {}) {
   const doc = await db.collection('referrals').doc(documentId).get();
   const existing = doc.exists ? doc.data() : {};
   const rerouteCount = Number(existing.rerouteCount || 0) + 1;
+  const reroutedToHospitalId = newHospital.id || null;
+  const reroutedToHospitalName = newHospital.name || null;
 
   const updatePayload = {
     referralStatus: 'sent',
     status: 'sent',
-    hospitalId: newHospital.id,
+    hospitalId: reroutedToHospitalId,
     rerouteCount,
     reroutedAt: new Date().toISOString(),
-    reroutedToHospitalId: newHospital.id,
-    reroutedToHospitalName: newHospital.name,
+    reroutedToHospitalId,
+    reroutedToHospitalName,
     aiDecision: 'reroute',
     aiReason: payload.reason || 'Acknowledgement timeout exceeded. Rerouting to a better-prepared hospital.',
-    aiRecommendedHospitalId: newHospital.id,
-    aiRecommendedHospitalName: newHospital.name,
+    aiRecommendedHospitalId: reroutedToHospitalId,
+    aiRecommendedHospitalName: reroutedToHospitalName,
     aiUpdatedAt: new Date().toISOString(),
   };
 

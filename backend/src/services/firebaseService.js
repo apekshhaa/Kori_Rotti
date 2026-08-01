@@ -91,11 +91,10 @@ const updateReferralStatus = async (
             .collection("referrals")
             .doc(referralId)
             .update({
-
+                referralStatus: status,
+                status,
                 smsStatus: status,
-
                 messageSid: messageSid
-
             });
 
     } catch (error) {
@@ -118,8 +117,8 @@ const getReferralById = async (referralId) => {
         return null;
     }
 
-    const data = doc.data();
-    const { id: legacyId, ...rest } = data || {};
+    const data = doc.data() || {};
+    const { id: legacyId, ...rest } = data;
 
     return {
         id: doc.id,
