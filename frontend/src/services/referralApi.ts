@@ -1,0 +1,413 @@
+import { Patient } from '../types';
+
+export interface BackendVitals {
+  pulse?: number;
+  heartRate?: number;
+  systolic_bp?: number;
+  systolicBP?: number;
+  systolicBp?: number;
+  diastolic_bp?: number;
+  diastolicBP?: number;
+  diastolicBp?: number;
+  temperature?: number;
+  temp?: number;
+  tempUnit?: string;
+  spo2?: number;
+  spO2?: number;
+  respiration?: number;
+  respiratoryRate?: number;
+}
+
+export interface BackendReferral {
+  id?: string;
+  referralId?: string;
+  _id?: string;
+  patientId?: string;
+  patientName?: string;
+  name?: string;
+  age?: number;
+  gender?: string;
+  phc?: string;
+  referringFacility?: string;
+  timestamp?: number | string;
+  riskScore?: number;
+  riskLevel?: string;
+  risk?: {
+    score?: number;
+    level?: string;
+  };
+  newsScore?: number;
+  vitals?: BackendVitals;
+  caregiverFlags?: string[];
+  caregiverObservations?: string[];
+  hospitalId?: string;
+  status?: string; // 'sent' | 'acknowledged' | 'arrived' | 'checked_in'
+  eta?: number; // minutes
+  recommendedActions?: string[];
+  historyScores?: { time: string; score: number }[];
+}
+
+export interface NormalizedReferral {
+  id: string;
+  referralId: string;
+  patientId: string;
+  patientName: string;
+  age: number;
+  gender: string;
+  phc: string;
+  timestamp: number;
+  formattedTime: string;
+  riskScore: number;
+  riskLevel: 'URGENT' | 'WATCH' | 'LOW';
+  vitals: {
+    pulse: number;
+    systolic_bp: number;
+    diastolic_bp: number;
+    temperature: number;
+    tempUnit: string;
+    spo2: number;
+    respiration: number;
+  };
+  caregiverFlags: string[];
+  hospitalId: string;
+  status: 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
+  eta: number | null; // minutes
+  formattedEta: string;
+  recommendedActions: string[];
+  trend?: { time: string; score: number; pulse?: number; spo2?: number; respiration?: number }[];
+  timeline: { time: string; label: string }[];
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+/**
+ * Normalizes backend responses into a unified referral model.
+ */
+export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
+  const id = raw.id || raw.referralId || raw._id || `REF-${Math.floor(1000 + Math.random() * 9000)}`;
+  const referralId = raw.referralId || id;
+  const patientId = raw.patientId || raw.id || 'PHC-003';
+  const patientName = raw.patientName || raw.name || 'Lakshmi';
+  const age = raw.age ?? 62;
+  const gender = raw.gender || 'Female';
+  const phc = raw.phc || raw.referringFacility || 'Demo Rural PHC';
+
+  let timestamp = Date.now();
+  if (typeof raw.timestamp === 'number') {
+    timestamp = raw.timestamp;
+  } else if (typeof raw.timestamp === 'string') {
+    const parsed = Date.parse(raw.timestamp);
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+
+  const dateObj = new Date(timestamp);
+  const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Risk Score & Level
+  const riskScore = raw.riskScore ?? raw.risk?.score ?? raw.newsScore ?? 18;
+  let rawLevel = (raw.riskLevel || raw.risk?.level || '').toUpperCase();
+  if (!rawLevel) {
+    if (riskScore >= 12) rawLevel = 'URGENT';
+    else if (riskScore >= 5) rawLevel = 'WATCH';
+    else rawLevel = 'LOW';
+  } else if (rawLevel === 'HIGH RISK' || rawLevel === 'HIGH') {
+    rawLevel = 'URGENT';
+  } else if (rawLevel === 'MODERATE' || rawLevel === 'STABLE') {
+    rawLevel = 'WATCH';
+  }
+
+  const riskLevel = (['URGENT', 'WATCH', 'LOW'].includes(rawLevel) ? rawLevel : 'URGENT') as 'URGENT' | 'WATCH' | 'LOW';
+
+  // Vitals
+  const v = raw.vitals || {};
+  const vitals = {
+    pulse: v.pulse ?? v.heartRate ?? 115,
+    systolic_bp: v.systolic_bp ?? v.systolicBP ?? v.systolicBp ?? 160,
+    diastolic_bp: v.diastolic_bp ?? v.diastolicBP ?? v.diastolicBp ?? 95,
+    temperature: v.temperature ?? v.temp ?? 38.5,
+    tempUnit: v.tempUnit || '°C',
+    spo2: v.spo2 ?? v.spO2 ?? 92,
+    respiration: v.respiration ?? v.respiratoryRate ?? 26,
+  };
+
+  // Caregiver flags
+  let caregiverFlags: string[] = [];
+  if (Array.isArray(raw.caregiverFlags) && raw.caregiverFlags.length > 0) {
+    caregiverFlags = raw.caregiverFlags;
+  } else if (Array.isArray(raw.caregiverObservations) && raw.caregiverObservations.length > 0) {
+    caregiverFlags = raw.caregiverObservations;
+  } else {
+    caregiverFlags = ['Breathing harder'];
+  }
+
+  const hospitalId = raw.hospitalId || 'dist-hospital-1';
+  const status = (raw.status || 'sent').toLowerCase() as 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
+
+  // ETA formatting
+  const eta = raw.eta !== undefined && raw.eta !== null ? Number(raw.eta) : 75;
+  let formattedEta = 'ETA unavailable';
+  if (eta !== null && !isNaN(eta)) {
+    if (eta >= 60) {
+      const hours = Math.floor(eta / 60);
+      const mins = eta % 60;
+      formattedEta = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    } else if (eta > 0) {
+      formattedEta = `${eta} min`;
+    } else {
+      formattedEta = 'Arrived';
+    }
+  }
+
+  // Recommended actions (preparation checklist)
+  const recommendedActions = raw.recommendedActions && raw.recommendedActions.length > 0
+    ? raw.recommendedActions
+    : [
+        'Prepare appropriate monitored bed/area',
+        'Check oxygen/support equipment availability',
+        'Alert receiving clinical team',
+        'Review referral information',
+      ];
+
+  const timeline = [
+    { time: '09:41', label: 'Risk threshold crossed' },
+    { time: '09:42', label: 'Referral sent' },
+    { time: '09:42', label: 'Hospital received alert' },
+  ];
+
+  if (status === 'acknowledged' || status === 'arrived' || status === 'checked_in') {
+    timeline.push({ time: '09:44', label: 'Hospital acknowledged' });
+  }
+  if (status === 'arrived' || status === 'checked_in') {
+    timeline.push({ time: '10:55', label: 'Patient arrived' });
+  }
+  if (status === 'checked_in') {
+    timeline.push({ time: '11:00', label: 'Patient checked in' });
+  } else {
+    timeline.push({ time: `Expected ${formattedEta}`, label: 'Patient arrival' });
+  }
+
+  return {
+    id,
+    referralId,
+    patientId,
+    patientName,
+    age,
+    gender,
+    phc,
+    timestamp,
+    formattedTime,
+    riskScore,
+    riskLevel,
+    vitals,
+    caregiverFlags,
+    hospitalId,
+    status,
+    eta,
+    formattedEta,
+    recommendedActions,
+    timeline,
+  };
+}
+
+// Local mock referrals state for demo fallback
+const MOCK_REFERRALS: BackendReferral[] = [
+  {
+    id: 'REF-2024-082',
+    patientId: 'PHC-003',
+    patientName: 'Lakshmi',
+    age: 62,
+    gender: 'Female',
+    phc: 'Demo Rural PHC',
+    timestamp: Date.now() - 15 * 60 * 1000,
+    riskScore: 18,
+    riskLevel: 'URGENT',
+    vitals: {
+      heartRate: 115,
+      spO2: 92,
+      temperature: 38.5,
+      tempUnit: '°C',
+      systolicBp: 160,
+      diastolicBp: 95,
+      respiratoryRate: 26,
+    },
+    caregiverFlags: ['Breathing harder'],
+    hospitalId: 'dist-hospital-1',
+    status: 'sent',
+    eta: 75,
+    recommendedActions: [
+      'Prepare appropriate monitored bed/area',
+      'Check oxygen/support equipment availability',
+      'Alert receiving clinical team',
+      'Review referral information',
+    ],
+  },
+  {
+    id: 'REF-2024-091',
+    patientId: '#4902',
+    patientName: 'Ramesh Patel',
+    age: 54,
+    gender: 'Male',
+    phc: 'Anugraha PHC',
+    timestamp: Date.now() - 45 * 60 * 1000,
+    riskScore: 14,
+    riskLevel: 'URGENT',
+    vitals: {
+      heartRate: 128,
+      spO2: 88,
+      temperature: 38.4,
+      tempUnit: '°C',
+      systolicBp: 92,
+      diastolicBp: 60,
+      respiratoryRate: 26,
+    },
+    caregiverFlags: ['Chest discomfort', 'High fever'],
+    hospitalId: 'dist-hospital-1',
+    status: 'acknowledged',
+    eta: 35,
+    recommendedActions: [
+      'Prepare resuscitation room',
+      'Alert trauma/cardiology registrar',
+      'Ready IV access & continuous O2',
+    ],
+  },
+  {
+    id: 'REF-2024-095',
+    patientId: '#5220',
+    patientName: 'Anand Kumar',
+    age: 68,
+    gender: 'Male',
+    phc: 'Kudpu Community Sub-center',
+    timestamp: Date.now() - 90 * 60 * 1000,
+    riskScore: 6,
+    riskLevel: 'WATCH',
+    vitals: {
+      heartRate: 98,
+      spO2: 94,
+      temperature: 37.8,
+      tempUnit: '°C',
+      systolicBp: 138,
+      diastolicBp: 88,
+      respiratoryRate: 20,
+    },
+    caregiverFlags: ['Persistent cough'],
+    hospitalId: 'dist-hospital-1',
+    status: 'sent',
+    eta: 90,
+    recommendedActions: [
+      'Assign general observation bed',
+      'Schedule routine lab work',
+    ],
+  },
+];
+
+let inMemoryReferrals = [...MOCK_REFERRALS];
+
+export async function fetchIncomingReferrals(): Promise<{
+  referrals: NormalizedReferral[];
+  isMock: boolean;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/referrals/incoming`, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawList: BackendReferral[] = Array.isArray(data) ? data : data.referrals || [];
+      const normalized = rawList.map(normalizeReferral);
+      return { referrals: normalized, isMock: false };
+    }
+  } catch (err) {
+    // API unavailable - fall back to mock data
+  }
+
+  // Fallback
+  return {
+    referrals: inMemoryReferrals.map(normalizeReferral),
+    isMock: true,
+  };
+}
+
+export async function updateReferralStatus(
+  referralId: string,
+  status: 'acknowledged' | 'arrived' | 'checked_in'
+): Promise<{ success: boolean; isMock: boolean }> {
+  // Update local memory copy
+  inMemoryReferrals = inMemoryReferrals.map((r) =>
+    (r.id === referralId || r.referralId === referralId || r.patientId === referralId)
+      ? { ...r, status }
+      : r
+  );
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${referralId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+
+    if (res.ok) {
+      return { success: true, isMock: false };
+    }
+  } catch (err) {
+    // API unavailable - fallback worked locally
+  }
+
+  return { success: true, isMock: true };
+}
+
+export async function createReferral(patient: Patient, caregiverFlags: string[] = ['Breathing harder']): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
+  const newRaw: BackendReferral = {
+    id: patient.referralRef || `REF-2024-${Math.floor(100 + Math.random() * 900)}`,
+    patientId: patient.id,
+    patientName: patient.name,
+    age: patient.age || 50,
+    gender: patient.gender || 'Female',
+    phc: 'Demo Rural PHC',
+    timestamp: Date.now(),
+    riskScore: patient.newsScore,
+    riskLevel: patient.newsScore >= 12 ? 'URGENT' : patient.newsScore >= 5 ? 'WATCH' : 'LOW',
+    vitals: {
+      pulse: patient.vitals.heartRate,
+      heartRate: patient.vitals.heartRate,
+      spo2: patient.vitals.spO2,
+      spO2: patient.vitals.spO2,
+      temperature: patient.vitals.temperature,
+      tempUnit: patient.vitals.tempUnit,
+      systolic_bp: patient.vitals.systolicBp,
+      diastolic_bp: patient.vitals.diastolicBp,
+      respiration: patient.vitals.respiratoryRate || 24,
+    },
+    caregiverFlags,
+    hospitalId: 'dist-hospital-1',
+    status: 'sent',
+    eta: 75,
+    recommendedActions: [
+      'Prepare appropriate monitored bed/area',
+      'Check oxygen/support equipment availability',
+      'Alert receiving clinical team',
+      'Review referral information',
+    ],
+  };
+
+  // Add to in-memory list at top
+  inMemoryReferrals = [newRaw, ...inMemoryReferrals];
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/referrals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRaw),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, isMock: false, data: normalizeReferral(data) };
+    }
+  } catch (err) {
+    // API unavailable
+  }
+
+  return { success: true, isMock: true, data: normalizeReferral(newRaw) };
+}

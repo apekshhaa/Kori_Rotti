@@ -1,0 +1,6 @@
+{
+  "name": "Setu",
+  "description": "Clinical early warning and referral coordination application for rural healthcare posts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
