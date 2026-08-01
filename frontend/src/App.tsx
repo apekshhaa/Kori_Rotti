@@ -8,6 +8,7 @@ import { AssessmentsView } from './components/AssessmentsView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { NewAssessmentModal } from './components/NewAssessmentModal';
 import { HospitalDashboard } from './components/hospital/HospitalDashboard';
+import { CaregiverObservationPage } from './components/CaregiverObservationPage';
 import { createReferral } from './services/referralApi';
 import { useTranslation, languageOptions, LanguageCode } from './i18n.tsx';
 
@@ -125,6 +126,11 @@ export default function App() {
   const translatePage = (lang: LanguageCode) => {
     setLanguage(lang);
   };
+
+  if (currentPath.startsWith('/caregiver/')) {
+    const token = currentPath.split('/caregiver/')[1] || '';
+    return <CaregiverObservationPage key={token || 'caregiver'} patientToken={token} />;
+  }
 
   // Render Receiving Hospital Dashboard at /hospital route
   if (currentPath.startsWith('/hospital')) {

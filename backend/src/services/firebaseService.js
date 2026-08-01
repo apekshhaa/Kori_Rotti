@@ -26,12 +26,32 @@ const db = require("../config/firebase");
 
 // };
 
+const buildPatientToken = (referralData = {}) => {
+    const existing = typeof referralData.patientToken === "string" ? referralData.patientToken.trim() : "";
+    if (existing) {
+        return existing;
+    }
+
+    const patientId = referralData.patientId || referralData.referralId || referralData.id || "patient";
+    const normalizedPatientId = String(patientId)
+        .replace(/[^a-zA-Z0-9_-]+/g, "-")
+        .replace(/(^-|-$)/g, "") || "patient";
+
+    return `${normalizedPatientId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
 const saveReferral = async (referralData) => {
     const { id, ...payload } = referralData;
+    const referralId = payload.referralId || payload.id || id || null;
+    const patientId = payload.patientId || referralId || id || "patient";
+    const patientToken = buildPatientToken({ ...payload, referralId, patientId });
 
     const docRef = await db.collection("referrals").add({
 
         ...payload,
+        patientId,
+        referralId,
+        patientToken,
 
         // Existing fields
         createdAt: new Date(),
@@ -45,7 +65,10 @@ const saveReferral = async (referralData) => {
 
         eta: 75,
 
-        recommendedActions: []
+        recommendedActions: [],
+        caregiverObservations: payload.caregiverObservations || [],
+        lastCaregiverObservationAt: null,
+        lastCaregiverObservationText: ""
 
     });
 
@@ -98,8 +121,7 @@ const getReferralById = async (referralId) => {
     const { id: legacyId, ...rest } = data || {};
 
     return {
-        id: doc.id,
-        ...rest,
+        id: doc.id,        patientToken: payload.patientToken || doc.id,        ...rest,
     };
 
 };
@@ -117,14 +139,23 @@ const getIncomingReferrals = async () => {
             const { id, ...payload } = data;
             return {
                 id: doc.id,
+                patientToken: payload.patientToken || doc.id,
                 ...payload,
             };
         })
         .filter(referral => {
             const status = referral.referralStatus || referral.status;
-            return ["sent", "acknowledged", "arrived", "checked_in"].includes(status);
+            const hasObservations = Array.isArray(referral.caregiverObservations) && referral.caregiverObservations.length > 0;
+            return ["sent", "acknowledged", "arrived", "checked_in"].includes(status) || hasObservations;
         })
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        .sort((a, b) => {
+            const aObservationTime = a.lastCaregiverObservationAt ? new Date(a.lastCaregiverObservationAt).getTime() : 0;
+            const bObservationTime = b.lastCaregiverObservationAt ? new Date(b.lastCaregiverObservationAt).getTime() : 0;
+            if (aObservationTime || bObservationTime) {
+                return bObservationTime - aObservationTime;
+            }
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
 
     return referrals;
 };
@@ -149,11 +180,103 @@ const deleteReferralById = async (referralId) => {
         .delete();
 };
 
+const getReferralByToken = async (patientToken) => {
+    const snapshot = await db
+        .collection("referrals")
+        .where("patientToken", "==", patientToken)
+        .limit(1)
+        .get();
+
+    if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+        };
+    }
+
+    const directDoc = await db.collection("referrals").doc(patientToken).get();
+    if (!directDoc.exists) {
+        return null;
+    }
+
+    const data = directDoc.data();
+    return {
+        id: directDoc.id,
+        ...data,
+    };
+};
+
+const addCaregiverObservation = async (patientToken, observation) => {
+    const referral = await getReferralByToken(patientToken);
+    if (!referral) {
+        throw new Error("Referral not found");
+    }
+
+    const resolvedPatientToken = referral.patientToken || patientToken;
+    const observationPayload = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        patientToken: resolvedPatientToken,
+        patientId: referral.patientId || referral.referralId || referral.id,
+        patientName: referral.patientName || "Patient",
+        text: observation.text,
+        timestamp: new Date(),
+        createdAt: new Date(),
+        observedBy: observation.observedBy || "Caregiver"
+    };
+
+    const observations = Array.isArray(referral.caregiverObservations) ? referral.caregiverObservations : [];
+    observations.unshift(observationPayload);
+
+    await db.collection("referrals").doc(referral.id).update({
+        patientToken: resolvedPatientToken,
+        caregiverObservations: observations.slice(0, 20),
+        lastCaregiverObservationAt: observationPayload.timestamp,
+        lastCaregiverObservationText: observationPayload.text,
+        caregiverFlags: [observationPayload.text, ...(Array.isArray(referral.caregiverFlags) ? referral.caregiverFlags : []).filter(Boolean).slice(0, 4)]
+    });
+
+    return observationPayload;
+};
+
+const dismissCaregiverObservation = async (referralId, observationId) => {
+    const docRef = db.collection("referrals").doc(referralId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+        return false;
+    }
+
+    const referral = doc.data() || {};
+    const observations = Array.isArray(referral.caregiverObservations) ? referral.caregiverObservations : [];
+    const nextObservations = observations.filter((item) => item?.id !== observationId);
+
+    const updatePayload = {
+        caregiverObservations: nextObservations.slice(0, 20),
+    };
+
+    if (nextObservations.length > 0) {
+        const latest = nextObservations[0];
+        updatePayload.lastCaregiverObservationAt = latest.timestamp || null;
+        updatePayload.lastCaregiverObservationText = latest.text || "";
+    } else {
+        updatePayload.lastCaregiverObservationAt = null;
+        updatePayload.lastCaregiverObservationText = "";
+    }
+
+    await docRef.update(updatePayload);
+    return true;
+};
+
 module.exports = {
     saveReferral,
     updateReferralStatus,
     getReferralById,
     getIncomingReferrals,
     updateReferralLifecycleStatus,
-    deleteReferralById
+    deleteReferralById,
+    getReferralByToken,
+    addCaregiverObservation,
+    dismissCaregiverObservation
 };
