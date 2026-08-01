@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { Patient } from '../types';
 import { useTranslation } from '../i18n.tsx';
+import { CaregiverQrCard } from './hospital/CaregiverQrCard';
 
 interface ReferralDocCardProps {
   patient: Patient;
   onSendReferral: (patientId: string) => void;
+  onDeletePatient: (patientId: string) => void;
   onSwitchToNewsView: () => void;
 }
 
 export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
   patient,
   onSendReferral,
+  onDeletePatient,
   onSwitchToNewsView,
 }) => {
   const { t } = useTranslation();
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isSent, setIsSent] = useState(patient.referralSent);
+  const caregiverReferral = {
+    id: patient.referralRef?.replace(/^#/, '') || patient.patientId,
+    referralId: patient.referralRef?.replace(/^#/, '') || patient.patientId,
+    patientId: patient.patientId,
+    patientToken: patient.referralRef?.replace(/^#/, '') || patient.patientId,
+  } as any;
 
   const handleSendReferralClick = () => {
     if (isSent || isTransmitting) return;
@@ -27,6 +36,12 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
       setIsSent(true);
       onSendReferral(patient.patientId);
     }, 1800);
+  };
+
+  const handleDeleteClick = () => {
+    const confirmed = window.confirm(`Delete the record for ${patient.patientName}? This cannot be undone.`);
+    if (!confirmed) return;
+    onDeletePatient(patient.patientId);
   };
 
   return (
@@ -58,7 +73,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
           </div>
           <div className="bg-[#b50063]/10 dark:bg-[#ffb0c9]/20 px-3 py-1 rounded-full border border-[#b50063]/20 dark:border-[#ffb0c9]/30">
             <span className="text-xs font-bold text-[#b50063] dark:text-[#ffb0c9]">
-              {patient.referralRef || '#REF-2024-082'}
+              {patient.referralRef || 'Referral'}
             </span>
           </div>
         </div>
@@ -94,6 +109,8 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
         </div>
       </div>
 
+      <CaregiverQrCard referral={caregiverReferral} />
+
       {/* Urgency Score Card */}
       <div className="bg-[#b50063] dark:bg-[#8e004c] rounded-2xl p-6 flex items-center justify-between shadow-xl shadow-[#b50063]/25 transition-all">
         <div className="flex flex-col">
@@ -117,6 +134,17 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
             {patient.newsScore >= 15 ? t('referral.immediateTransfer') : t('referral.highPriority')}
           </span>
         </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={handleDeleteClick}
+          className="flex-1 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold transition-all active:scale-[0.99]"
+        >
+          <span className="material-symbols-outlined text-lg align-middle mr-2">delete</span>
+          Delete Patient Record
+        </button>
       </div>
 
       {/* Clinical Vitals Section */}

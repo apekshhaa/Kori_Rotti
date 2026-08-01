@@ -42,12 +42,11 @@ const buildPatientToken = (referralData = {}) => {
 
 const saveReferral = async (referralData) => {
     const { id, ...payload } = referralData;
-    const referralId = payload.referralId || payload.id || id || null;
+    const referralId = String(payload.referralId || payload.id || id || payload.patientId || `ref-${Date.now()}`);
     const patientId = payload.patientId || referralId || id || "patient";
     const patientToken = buildPatientToken({ ...payload, referralId, patientId });
 
-    const docRef = await db.collection("referrals").add({
-
+    await db.collection("referrals").doc(referralId).set({
         ...payload,
         patientId,
         referralId,
@@ -70,15 +69,11 @@ const saveReferral = async (referralData) => {
         caregiverObservations: payload.caregiverObservations || [],
         lastCaregiverObservationAt: null,
         lastCaregiverObservationText: ""
+    }, { merge: true });
 
-    });
-
-    return docRef.id;
-
+    return referralId;
 };
 
-
-// Update SMS status
 const updateReferralStatus = async (
     referralId,
     status,
@@ -159,7 +154,15 @@ const getIncomingReferrals = async () => {
             return (b.timestamp || 0) - (a.timestamp || 0);
         });
 
-    return referrals;
+    const seenKeys = new Set();
+    return referrals.filter((referral) => {
+        const key = referral.patientToken || referral.referralId || referral.patientId || referral.id;
+        if (seenKeys.has(key)) {
+            return false;
+        }
+        seenKeys.add(key);
+        return true;
+    });
 };
 
 

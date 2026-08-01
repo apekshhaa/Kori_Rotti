@@ -24,6 +24,7 @@ export interface BackendReferral {
   _id?: string;
   patientId?: string;
   patientName?: string;
+  patientToken?: string;
   name?: string;
   age?: number;
   gender?: string;
@@ -126,6 +127,8 @@ export function getPublicAppUrl(): string {
   return '';
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export function generateCaregiverUrl(patientToken: string): string {
   const baseUrl = getPublicAppUrl();
   if (!baseUrl) {
@@ -183,7 +186,7 @@ function buildTimeline(raw: BackendReferral, status: 'sent' | 'acknowledged' | '
     timeline.push({ time: formatTimelineTime(checkedInAt), label: 'Patient checked in' });
   } else if (status === 'checked_in') {
     timeline.push({ time: formatTimelineTime(sentAt), label: 'Patient checked in' });
-  } else if (status !== 'checked_in') {
+  } else {
     timeline.push({ time: `Expected ${formattedEta}`, label: 'Patient arrival' });
   }
 
@@ -197,7 +200,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
   const id = raw.id || raw.referralId || raw._id || `REF-${Math.floor(1000 + Math.random() * 9000)}`;
   const referralId = raw.referralId || id;
   const patientId = raw.patientId || raw.id || 'PHC-003';
-  const patientName = raw.patientName || raw.name || 'Lakshmi';
+  const patientName = raw.patientName || raw.name || 'Patient';
   const age = raw.age ?? 62;
   const gender = raw.gender || 'Female';
   const phc = raw.phc || raw.referringFacility || 'Demo Rural PHC';
@@ -264,7 +267,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
           timestamp: item.timestamp || item.createdAt || new Date().toISOString(),
           observedBy: item.observedBy || 'Caregiver',
         }))
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .sort((a: CaregiverObservation, b: CaregiverObservation) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     : [];
 
   // ETA formatting
@@ -341,36 +344,6 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
 
 // Local mock referrals state for demo fallback
 const MOCK_REFERRALS: BackendReferral[] = [
-  {
-    id: 'REF-2024-082',
-    patientId: 'PHC-003',
-    patientName: 'Lakshmi',
-    age: 62,
-    gender: 'Female',
-    phc: 'Demo Rural PHC',
-    timestamp: Date.now() - 15 * 60 * 1000,
-    riskScore: 4,
-    riskLevel: 'WATCH',
-    vitals: {
-      heartRate: 115,
-      spO2: 92,
-      temperature: 38.5,
-      tempUnit: '°C',
-      systolicBp: 160,
-      diastolicBp: 95,
-      respiratoryRate: 26,
-    },
-    caregiverFlags: ['Breathing harder'],
-    hospitalId: 'dist-hospital-1',
-    status: 'sent',
-    eta: 75,
-    recommendedActions: [
-      'Prepare appropriate monitored bed/area',
-      'Check oxygen/support equipment availability',
-      'Alert receiving clinical team',
-      'Review referral information',
-    ],
-  },
   {
     id: 'REF-2024-091',
     patientId: '#4902',

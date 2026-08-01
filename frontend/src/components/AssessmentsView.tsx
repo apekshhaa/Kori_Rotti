@@ -9,6 +9,7 @@ interface AssessmentsViewProps {
   activePatientId: string;
   onSelectPatient: (patientId: string) => void;
   onSendReferral: (patientId: string) => void;
+  onDeletePatient: (patientId: string) => void;
   onOpenNewAssessment: () => void;
 }
 
@@ -17,6 +18,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
   activePatientId,
   onSelectPatient,
   onSendReferral,
+  onDeletePatient,
   onOpenNewAssessment,
 }) => {
   const { t } = useTranslation();
@@ -87,6 +89,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
         <ReferralDocCard
           patient={selectedPatient}
           onSendReferral={onSendReferral}
+          onDeletePatient={onDeletePatient}
           onSwitchToNewsView={() => setSubView('news')}
         />
       ) : (

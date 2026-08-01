@@ -115,7 +115,7 @@ const translations: Record<LanguageCode, any> = {
       unableFetch: 'Unable to fetch AI prediction. Retry.',
     },
     toast: {
-      loadedDemo: 'Loaded demo patient Lakshmi (#REF-2024-082)',
+      loadedDemo: 'Loaded demo patient',
       referralSent: 'Referral transmitted to District Hospital!',
     },
   },
@@ -223,7 +223,7 @@ const translations: Record<LanguageCode, any> = {
       unableFetch: 'AI भविष्यवाणी लाने में विफल। पुनः प्रयास करें।',
     },
     toast: {
-      loadedDemo: 'डेमो मरीज लक्ष्मी को लोड किया गया (#REF-2024-082)',
+      loadedDemo: 'डेमो मरीज लोड किया गया',
       referralSent: 'रेफरल जिला अस्पताल को भेजा गया!',
     },
   },
@@ -331,7 +331,7 @@ const translations: Record<LanguageCode, any> = {
       unableFetch: 'No se puede obtener la predicción de IA. Reintentar.',
     },
     toast: {
-      loadedDemo: 'Paciente demo Lakshmi cargado (#REF-2024-082)',
+      loadedDemo: 'Paciente demo cargado',
       referralSent: '¡Referencia transmitida al Hospital de Distrito!',
     },
   },
@@ -439,7 +439,7 @@ const translations: Record<LanguageCode, any> = {
       unableFetch: 'Impossible de récupérer la prédiction IA. Réessayez.',
     },
     toast: {
-      loadedDemo: 'Patient démo Lakshmi chargé (#REF-2024-082)',
+      loadedDemo: 'Patient démo chargé',
       referralSent: 'Référence transmise à l’hôpital de district !',
     },
   },
@@ -547,25 +547,23 @@ const translations: Record<LanguageCode, any> = {
       unableFetch: 'AI ಮುನ್ಸೂಚನೆ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ಮರುಪ್ರಯತ್ನಿಸಿ.',
     },
     toast: {
-      loadedDemo: 'ಡೆಮೊ ರೋಗಿ ಲಕ್ಷ್ಮಿ ಅವರ ವಿವರ ಪಡೆಯಲಾಗಿದೆ (#REF-2024-082)',
+      loadedDemo: 'ಡೆಮೊ ರೋಗಿ ಲೋಡ್ ಮಾಡಲಾಗಿದೆ',
       referralSent: 'ರೆಫರಲ್ ಅನ್ನು ಜಿಲ್ಲಾ ಆಸ್ಪತ್ರೆಗೆ ಕಳುಹಿಸಲಾಗಿದೆ!',
     },
   },
 };
 
-export interface TranslationContextValue {
+interface TranslationContextType {
   language: LanguageCode;
   setLanguage: (language: LanguageCode) => void;
   t: (key: string, fallback?: string) => string;
 }
 
-const defaultContext: TranslationContextValue = {
+const TranslationContext = createContext<TranslationContextType>({
   language: 'en',
   setLanguage: () => {},
   t: (key: string, fallback = '') => fallback || key,
-};
-
-const TranslationContext = createContext<TranslationContextValue>(defaultContext);
+});
 
 const lookup = (obj: any, path: string): string | undefined => {
   return path.split('.').reduce((current, segment) => {
@@ -573,7 +571,7 @@ const lookup = (obj: any, path: string): string | undefined => {
       return current[segment];
     }
     return undefined;
-  }, obj) as string | undefined;
+  }, obj);
 };
 
 export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

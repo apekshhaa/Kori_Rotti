@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { NormalizedReferral } from '../../services/referralApi';
 import { PreparationChecklist } from './PreparationChecklist';
 import { ReferralTimeline } from './ReferralTimeline';
-import { CaregiverQrCard } from './CaregiverQrCard';
 
 interface ReferralDetailProps {
   referral: NormalizedReferral;
@@ -208,8 +207,6 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
           </div>
         </div>
       </div>
-
-      <CaregiverQrCard referral={referral} />
 
       {/* Caregiver Observations */}
       <div className="flex flex-col gap-2">

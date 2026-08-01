@@ -9,7 +9,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { NewAssessmentModal } from './components/NewAssessmentModal';
 import { HospitalDashboard } from './components/hospital/HospitalDashboard';
 import { CaregiverObservationPage } from './components/CaregiverObservationPage';
-import { createReferral } from './services/referralApi';
+import { createReferral, deleteReferral } from './services/referralApi';
 import { useTranslation, languageOptions, LanguageCode } from './i18n.tsx';
 
 export default function App() {
@@ -28,7 +28,7 @@ export default function App() {
 
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
-  const [activePatientId, setActivePatientId] = useState<string>('PHC-003');
+  const [activePatientId, setActivePatientId] = useState<string>(INITIAL_PATIENTS[0]?.patientId || '');
   const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -85,7 +85,23 @@ export default function App() {
   const handleSendReferral = async (patientId: string) => {
     const targetPatient = patients.find((p) => p.patientId === patientId);
     if (targetPatient) {
-      await createReferral(targetPatient, targetPatient.caregiverFlags || ['Breathing harder']);
+      const result = await createReferral(targetPatient, targetPatient.caregiverFlags || ['Breathing harder']);
+      if (result.success && result.data) {
+        setPatients((prev) =>
+          prev.map((p) =>
+            p.patientId === patientId
+              ? {
+                  ...p,
+                  referralSent: true,
+                  referralSentTime: 'Just now',
+                  referralRef: result.data?.referralId || result.data?.id || p.referralRef,
+                }
+              : p
+          )
+        );
+        showToast('Referral transmitted to District Hospital!');
+        return;
+      }
     }
     setPatients((prev) =>
       prev.map((p) =>
@@ -99,6 +115,30 @@ export default function App() {
       )
     );
     showToast('Referral transmitted to District Hospital!');
+  };
+
+  const handleDeletePatient = async (patientId: string) => {
+    const targetPatient = patients.find((p) => p.patientId === patientId);
+    if (!targetPatient) return;
+
+    const previousPatients = patients;
+    setPatients((prev) => prev.filter((p) => p.patientId !== patientId));
+
+    if (activePatientId === patientId) {
+      const remaining = previousPatients.filter((p) => p.patientId !== patientId);
+      setActivePatientId(remaining[0]?.patientId || '');
+    }
+
+    if (targetPatient.referralSent || targetPatient.referralRef) {
+      const result = await deleteReferral(targetPatient.referralRef || targetPatient.patientId);
+      if (!result.success && !result.isMock) {
+        setPatients(previousPatients);
+        setToastMessage('Unable to delete patient record. Please try again.');
+        return;
+      }
+    }
+
+    showToast('Patient record deleted successfully.');
   };
 
   const handleSaveNewPatient = (newPatient: Patient) => {
@@ -118,13 +158,13 @@ export default function App() {
   };
 
   const handleLoadDemoData = () => {
-    setActivePatientId('PHC-003');
+    setActivePatientId(INITIAL_PATIENTS[0]?.patientId || '');
     setActiveTab('assessments');
-    showToast('Loaded demo patient Lakshmi (#REF-2024-082)');
+    showToast('Loaded demo patient');
   };
 
-  const translatePage = (lang: LanguageCode) => {
-    setLanguage(lang);
+  const translatePage = (lang: string) => {
+    setLanguage(lang as LanguageCode);
   };
 
   if (currentPath.startsWith('/caregiver/')) {
@@ -179,6 +219,7 @@ export default function App() {
             activePatientId={activePatientId}
             onSelectPatient={setActivePatientId}
             onSendReferral={handleSendReferral}
+            onDeletePatient={handleDeletePatient}
             onOpenNewAssessment={() => setIsNewModalOpen(true)}
           />
         )}

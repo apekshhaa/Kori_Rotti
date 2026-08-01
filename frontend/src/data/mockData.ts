@@ -2,40 +2,6 @@ import { Patient } from '../types';
 
 export const INITIAL_PATIENTS: Patient[] = [
   {
-    patientId: 'PHC-003',
-    referralRef: '#REF-2024-082',
-    patientName: 'Lakshmi',
-    age: 62,
-    gender: 'Female',
-    photoUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBnSvud11lV4L8txUHww1rDvnGv5e8fPRA4xpFWIbKPmIZ3A6cDYpBzX76xTWOiOY_2-sFxR8VnBkmDUhUmOfy89jjL3a74mDJgMlC9C2ET2iwZ-lVeIjlQc7QdyqiufpvtvaghNE67yyto67pBPBzvdXvmnvK-SbwUHAExAFvhNDSTEhNTt8QA7ENlT3LqhYWciOo1Qx0pkoTD9ZiFk9Gb7GjdSQBh2devFxXoLFOLAKZ602wDMDyO',
-    riskLevel: 'WATCH',
-    newsScore: 4,
-    vitals: {
-      heartRate: 112,
-      spO2: 89,
-      temperature: 101.4,
-      tempUnit: '°F',
-      systolicBp: 145,
-      diastolicBp: 95,
-      respiratoryRate: 24,
-    },
-    lastAssessedTime: '2m ago',
-    phc: 'District General Hospital',
-    facilityDistance: '4.2km',
-    referralSent: false,
-    historyScores: [
-      { time: '10:00 AM', score: 8 },
-      { time: '11:00 AM', score: 11 },
-      { time: '12:00 PM', score: 14 },
-      { time: '01:00 PM', score: 13 },
-      { time: '02:00 PM', score: 17 },
-      { time: '02:15 PM', score: 18 },
-    ],
-    recommendation:
-      'The patient exhibits clinical instability. Immediate escalation to Medical Registrar and preparation for intensive care transfer is recommended.',
-  },
-  {
     patientId: '#4902',
     referralRef: '#REF-2024-091',
     patientName: 'Ramesh Patel',

@@ -18,7 +18,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
   if (!isOpen) return null;
 
   const [name, setName] = useState('');
-  const [patientId, setPatientId] = useState(`PHC-${Math.floor(100 + Math.random() * 900)}`);
+  const [patientId, setPatientId] = useState('');
   const [age, setAge] = useState<number>(45);
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Female');
   const [targetFacility, setTargetFacility] = useState('District General Hospital');
@@ -38,8 +38,9 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalName = name.trim() || `Patient ${patientId}`;
+    const resolvedPatientId = patientId.trim() || finalName.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'PATIENT';
     const newPatient: Patient = {
-      patientId: patientId,
+      patientId: resolvedPatientId,
       patientName: finalName,
       age,
       gender,
