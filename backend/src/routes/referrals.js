@@ -1,0 +1,65 @@
+// const express = require("express");
+
+// const router = express.Router();
+
+// const validateReferral = require("../middleware/validateReferral");
+
+// const {
+//     createReferral,
+//     getReferral
+// } = require("../controllers/referralController");
+
+// router.post(
+//     "/",
+//     validateReferral,
+//     createReferral
+// );
+
+// router.get("/:id", getReferral);
+
+// module.exports = router;
+
+const express = require("express");
+
+const router = express.Router();
+
+const {
+    createReferral,
+    getReferral,
+    getIncoming,
+    updateReferralLifecycle
+} = require("../controllers/referralController");
+
+const validateReferral = require("../middleware/validateReferral");
+
+
+// POST /api/referrals
+router.post(
+    "/",
+    validateReferral,
+    createReferral
+);
+
+
+// GET /api/referrals/incoming
+router.get(
+    "/incoming",
+    getIncoming
+);
+
+
+// PATCH /api/referrals/:id/status
+router.patch(
+    "/:id/status",
+    updateReferralLifecycle
+);
+
+
+// GET /api/referrals/:id
+router.get(
+    "/:id",
+    getReferral
+);
+
+
+module.exports = router;
