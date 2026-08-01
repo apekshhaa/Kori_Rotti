@@ -9,8 +9,8 @@ export const INITIAL_PATIENTS: Patient[] = [
     gender: 'Female',
     photoUrl:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuBnSvud11lV4L8txUHww1rDvnGv5e8fPRA4xpFWIbKPmIZ3A6cDYpBzX76xTWOiOY_2-sFxR8VnBkmDUhUmOfy89jjL3a74mDJgMlC9C2ET2iwZ-lVeIjlQc7QdyqiufpvtvaghNE67yyto67pBPBzvdXvmnvK-SbwUHAExAFvhNDSTEhNTt8QA7ENlT3LqhYWciOo1Qx0pkoTD9ZiFk9Gb7GjdSQBh2devFxXoLFOLAKZ602wDMDyO',
-    riskLevel: 'URGENT',
-    newsScore: 18,
+    riskLevel: 'WATCH',
+    newsScore: 4,
     vitals: {
       heartRate: 112,
       spO2: 89,

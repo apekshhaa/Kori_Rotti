@@ -69,7 +69,6 @@ async function generateChecklist(referral, hospital) {
   items.push('Oxygen Ready');
   items.push('Blood Available');
   items.push('Respiratory Technician Available');
-  items.push('Emergency Doctor Assigned');
   items.push('Ventilator Ready');
 
   // If hospital lacks a resource, keep it required so AI can reroute or wait
@@ -310,19 +309,21 @@ async function rerouteReferral(referralId, newHospital, payload = {}) {
   const doc = await db.collection('referrals').doc(documentId).get();
   const existing = doc.exists ? doc.data() : {};
   const rerouteCount = Number(existing.rerouteCount || 0) + 1;
+  const reroutedToHospitalId = newHospital.id || null;
+  const reroutedToHospitalName = newHospital.name || null;
 
   const updatePayload = {
     referralStatus: 'sent',
     status: 'sent',
-    hospitalId: newHospital.id,
+    hospitalId: reroutedToHospitalId,
     rerouteCount,
     reroutedAt: new Date().toISOString(),
-    reroutedToHospitalId: newHospital.id,
-    reroutedToHospitalName: newHospital.name,
+    reroutedToHospitalId,
+    reroutedToHospitalName,
     aiDecision: 'reroute',
     aiReason: payload.reason || 'Acknowledgement timeout exceeded. Rerouting to a better-prepared hospital.',
-    aiRecommendedHospitalId: newHospital.id,
-    aiRecommendedHospitalName: newHospital.name,
+    aiRecommendedHospitalId: reroutedToHospitalId,
+    aiRecommendedHospitalName: reroutedToHospitalName,
     aiUpdatedAt: new Date().toISOString(),
   };
 

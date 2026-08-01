@@ -90,11 +90,10 @@ const updateReferralStatus = async (
             .collection("referrals")
             .doc(referralId)
             .update({
-
+                referralStatus: status,
+                status,
                 smsStatus: status,
-
                 messageSid: messageSid
-
             });
 
     } catch (error) {
@@ -117,11 +116,13 @@ const getReferralById = async (referralId) => {
         return null;
     }
 
-    const data = doc.data();
-    const { id: legacyId, ...rest } = data || {};
+    const data = doc.data() || {};
+    const { id: legacyId, ...rest } = data;
 
     return {
-        id: doc.id,        patientToken: payload.patientToken || doc.id,        ...rest,
+        id: doc.id,
+        patientToken: data.patientToken || doc.id,
+        ...rest,
     };
 
 };
@@ -168,6 +169,7 @@ const updateReferralLifecycleStatus = async (referralId, status) => {
         .doc(referralId)
         .update({
             referralStatus: status,
+            status,
             statusUpdatedAt: new Date()
         });
 

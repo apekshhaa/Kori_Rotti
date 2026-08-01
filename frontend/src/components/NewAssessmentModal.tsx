@@ -40,7 +40,6 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
     const finalName = name.trim() || `Patient ${patientId}`;
     const newPatient: Patient = {
       patientId: patientId,
-      referralRef: `#REF-2024-${Math.floor(100 + Math.random() * 900)}`,
       patientName: finalName,
       age,
       gender,
