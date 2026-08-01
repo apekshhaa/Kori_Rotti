@@ -1,6 +1,7 @@
 import React from 'react';
 import { Patient } from '../types';
 import { calculateNewsPoints } from '../utils/newsCalculator';
+import { useTranslation } from '../i18n.tsx';
 
 interface NewsBreakdownCardProps {
   patient: Patient;
@@ -13,6 +14,7 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
   onPrepareReferral,
   onSwitchToDocView,
 }) => {
+  const { t } = useTranslation();
   const calculation = calculateNewsPoints(patient.vitals);
 
   return (
@@ -20,13 +22,13 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
       {/* View Switcher Banner */}
       <div className="flex items-center justify-between bg-[#eeedf7] dark:bg-[#2c2128] p-2 px-3 rounded-xl">
         <span className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7]">
-          Mode: <strong className="text-[#1a1b22] dark:text-[#f1effa]">NEWS Scoring Model</strong>
+          {t('newsBreakdown.modeLabel')}: <strong className="text-[#1a1b22] dark:text-[#f1effa]">{t('newsBreakdown.modeValue')}</strong>
         </span>
         <button
           onClick={onSwitchToDocView}
           className="text-xs font-semibold text-[#b50063] dark:text-[#ffb0c9] flex items-center gap-1 hover:underline cursor-pointer"
         >
-          <span>View Referral Card</span>
+          <span>{t('newsBreakdown.viewReferralCard')}</span>
           <span className="material-symbols-outlined text-sm">description</span>
         </button>
       </div>
@@ -69,7 +71,7 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
           </div>
 
           <span className="text-xs font-bold text-[#b50063] dark:text-[#ffb0c9] tracking-[0.2em] mb-1 uppercase">
-            National Early Warning Score
+            {t('newsBreakdown.nationalEarlyWarningScore')}
           </span>
 
           <div className="flex items-baseline gap-1 my-1">
@@ -84,7 +86,7 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
           <div className="mt-3 px-5 py-1.5 bg-[#b50063] dark:bg-[#e2007d] rounded-full shadow-lg shadow-[#b50063]/30">
             <span className="text-xs font-extrabold text-white tracking-widest uppercase">
               {calculation.urgencyLevel === 'URGENT' || patient.newsScore >= 15
-                ? 'Urgent Action Required'
+                ? t('newsBreakdown.urgentActionRequired')
                 : `${calculation.urgencyLevel} RISK LEVEL`}
             </span>
           </div>
@@ -95,10 +97,10 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-lg font-bold text-[#1a1b22] dark:text-[#f1effa]">
-            Clinical Breakdown
+            {t('newsBreakdown.clinicalBreakdown')}
           </h2>
           <span className="text-xs font-medium text-[#5b3f47] dark:text-[#e3bdc7]">
-            Last updated: {patient.lastAssessedTime}
+            {t('newsBreakdown.lastUpdated')}: {patient.lastAssessedTime}
           </span>
         </div>
 
@@ -157,7 +159,7 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
           onClick={onPrepareReferral}
           className="w-full h-14 bg-[#b50063] hover:bg-[#a00057] text-white rounded-full font-bold text-base flex items-center justify-center gap-2 shadow-xl shadow-[#b50063]/25 active:scale-95 transition-transform"
         >
-          <span>Prepare Referral</span>
+          <span>{t('newsBreakdown.prepareReferral')}</span>
           <span className="material-symbols-outlined text-xl">arrow_forward</span>
         </button>
       </div>
@@ -165,8 +167,8 @@ export const NewsBreakdownCard: React.FC<NewsBreakdownCardProps> = ({
       {/* Decorative Chart Placeholder with Live Patient History */}
       <div className="w-full bg-[#f4f2fd] dark:bg-[#221a1f] rounded-2xl p-4 flex flex-col gap-2 border border-[#eeedf7] dark:border-[#382a33]">
         <div className="flex items-center justify-between text-xs text-[#5b3f47] dark:text-[#e3bdc7] font-semibold">
-          <span>NEWS Progression Timeline</span>
-          <span>Max Score: 20</span>
+          <span>{t('newsBreakdown.progressTimeline')}</span>
+          <span>{t('newsBreakdown.maxScore')}</span>
         </div>
         <div className="h-28 flex items-end gap-2 pt-2">
           {patient.historyScores.map((h, i) => {

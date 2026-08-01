@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AssessmentSubView, Patient } from '../types';
 import { ReferralDocCard } from './ReferralDocCard';
 import { NewsBreakdownCard } from './NewsBreakdownCard';
+import { useTranslation } from '../i18n.tsx';
 
 interface AssessmentsViewProps {
   patients: Patient[];
@@ -18,6 +19,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
   onSendReferral,
   onOpenNewAssessment,
 }) => {
+  const { t } = useTranslation();
   const [subView, setSubView] = useState<AssessmentSubView>('referral');
 
   const selectedPatient =
@@ -27,12 +29,12 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center gap-3">
         <span className="material-symbols-outlined text-5xl text-[#5b3f47]">clinical_notes</span>
-        <p className="text-sm font-semibold">No patient assessment found.</p>
+        <p className="text-sm font-semibold">{t('assessments.noPatientFound')}</p>
         <button
           onClick={onOpenNewAssessment}
           className="px-5 py-2.5 bg-[#b50063] text-white rounded-full font-bold text-sm"
         >
-          Create First Assessment
+          {t('assessments.createFirstAssessment')}
         </button>
       </div>
     );
@@ -76,7 +78,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
           title="Start new clinical assessment"
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          <span className="hidden sm:inline">New</span>
+          <span className="hidden sm:inline">{t('assessments.new')}</span>
         </button>
       </div>
 

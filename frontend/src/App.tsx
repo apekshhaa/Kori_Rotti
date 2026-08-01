@@ -9,9 +9,12 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { NewAssessmentModal } from './components/NewAssessmentModal';
 import { HospitalDashboard } from './components/hospital/HospitalDashboard';
 import { createReferral } from './services/referralApi';
+import { useTranslation, languageOptions, LanguageCode } from './i18n.tsx';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+
+  const { t, setLanguage, language } = useTranslation();
 
   // Theme state with localStorage persistence
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -119,6 +122,10 @@ export default function App() {
     showToast('Loaded demo patient Lakshmi (#REF-2024-082)');
   };
 
+  const translatePage = (lang: LanguageCode) => {
+    setLanguage(lang);
+  };
+
   // Render Receiving Hospital Dashboard at /hospital route
   if (currentPath.startsWith('/hospital')) {
     return (
@@ -140,8 +147,11 @@ export default function App() {
         onToggleDarkMode={handleToggleDarkMode}
         isOffline={isOffline}
         onToggleOffline={handleToggleOffline}
-        onOpenProfile={() => showToast('Health Officer: Dr. Anita Sharma (Primary Health Center #04)')}
+        onOpenProfile={() => showToast(t('toast.referralSent'))}
         onNavigateToHospital={() => navigateTo('/hospital')}
+        selectedLanguage={language}
+        languageOptions={languageOptions}
+        onSelectLanguage={translatePage}
       />
 
       {/* Main Content View Container */}

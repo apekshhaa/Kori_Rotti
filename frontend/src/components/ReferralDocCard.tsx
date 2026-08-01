@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Patient } from '../types';
+import { useTranslation } from '../i18n.tsx';
 
 interface ReferralDocCardProps {
   patient: Patient;
@@ -12,6 +13,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
   onSendReferral,
   onSwitchToNewsView,
 }) => {
+  const { t } = useTranslation();
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isSent, setIsSent] = useState(patient.referralSent);
 
@@ -32,13 +34,13 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
       {/* View Switcher Banner */}
       <div className="flex items-center justify-between bg-[#eeedf7] dark:bg-[#2c2128] p-2 px-3 rounded-xl">
         <span className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7]">
-          Mode: <strong className="text-[#1a1b22] dark:text-[#f1effa]">Official Referral Card</strong>
+          {t('referral.modeLabel')}: <strong className="text-[#1a1b22] dark:text-[#f1effa]">{t('referral.modeValue')}</strong>
         </span>
         <button
           onClick={onSwitchToNewsView}
           className="text-xs font-semibold text-[#b50063] dark:text-[#ffb0c9] flex items-center gap-1 hover:underline cursor-pointer"
         >
-          <span>View NEWS Breakdown</span>
+          <span>{t('referral.viewNewsBreakdown')}</span>
           <span className="material-symbols-outlined text-sm">analytics</span>
         </button>
       </div>
@@ -48,10 +50,10 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
         <div className="flex justify-between items-start">
           <div className="flex flex-col">
             <span className="text-[11px] font-bold text-[#b50063] dark:text-[#ffb0c9] uppercase tracking-widest">
-              Official Document
+              {t('referral.officialDocument')}
             </span>
             <h2 className="text-xl font-bold text-[#1a1b22] dark:text-[#f1effa] tracking-tight">
-              SETU REFERRAL
+              {t('referral.setuReferral')}
             </h2>
           </div>
           <div className="bg-[#b50063]/10 dark:bg-[#ffb0c9]/20 px-3 py-1 rounded-full border border-[#b50063]/20 dark:border-[#ffb0c9]/30">
@@ -96,7 +98,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
       <div className="bg-[#b50063] dark:bg-[#8e004c] rounded-2xl p-6 flex items-center justify-between shadow-xl shadow-[#b50063]/25 transition-all">
         <div className="flex flex-col">
           <span className="text-xs font-medium text-white/80 uppercase tracking-wider">
-            Clinical Priority Score
+            {t('referral.clinicalPriorityScore')}
           </span>
           <div className="flex items-baseline gap-1 mt-1">
             <span className="text-4xl font-black text-white">{patient.newsScore}</span>
@@ -107,12 +109,12 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
           <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full mb-1 border border-white/20">
             <span className="text-xs font-bold text-white uppercase tracking-tight">
               {patient.riskLevel === 'URGENT' || patient.newsScore >= 15
-                ? 'Urgent Action'
+                ? t('referral.urgentAction')
                 : patient.riskLevel}
             </span>
           </div>
           <span className="text-sm text-white/90 text-right italic font-medium">
-            {patient.newsScore >= 15 ? 'Immediate transfer recommended' : 'High clinical priority'}
+            {patient.newsScore >= 15 ? t('referral.immediateTransfer') : t('referral.highPriority')}
           </span>
         </div>
       </div>
@@ -123,7 +125,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
           <span className="material-symbols-outlined text-[#b50063] dark:text-[#ffb0c9]">
             analytics
           </span>
-          <h3 className="text-lg font-bold text-[#1a1b22] dark:text-[#f1effa]">Clinical Vitals</h3>
+          <h3 className="text-lg font-bold text-[#1a1b22] dark:text-[#f1effa]">{t('referral.clinicalVitals')}</h3>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5">

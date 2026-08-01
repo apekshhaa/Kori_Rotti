@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Patient, Vitals } from '../types';
 import { calculateNewsPoints } from '../utils/newsCalculator';
+import { useTranslation } from '../i18n.tsx';
 
 interface NewAssessmentModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
   onClose,
   onSavePatient,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const [name, setName] = useState('');
@@ -72,13 +74,13 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             <span className="material-symbols-outlined text-[#b50063] dark:text-[#ffb0c9] text-2xl">
               clinical_notes
             </span>
-            <h2 className="text-xl font-bold">New Patient Assessment</h2>
+            <h2 className="text-xl font-bold">{t('newAssessment.title')}</h2>
           </div>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#eeedf7] dark:bg-[#382a33] flex items-center justify-center hover:bg-[#e3e1ec]"
           >
-            <span className="material-symbols-outlined text-sm">close</span>
+            <span className="material-symbols-outlined text-sm">{t('newAssessment.close')}</span>
           </button>
         </div>
 
@@ -87,13 +89,13 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
           <div className="bg-[#e8e7f1] dark:bg-[#382a33] p-4 rounded-2xl flex items-center justify-between border border-[#b50063]/30">
             <div>
               <span className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] uppercase tracking-wider block">
-                Calculated NEWS Score
+                {t('newAssessment.calculatedNEWS')}
               </span>
               <div className="flex items-baseline gap-1 mt-0.5">
                 <span className="text-3xl font-black text-[#1a1b22] dark:text-[#f1effa]">
                   {newsCalc.totalScore}
                 </span>
-                <span className="text-sm font-bold text-[#5b3f47] dark:text-[#e3bdc7]">/ 20</span>
+                <span className="text-sm font-bold text-[#5b3f47] dark:text-[#e3bdc7]">{t('newAssessment.scoreOf')}</span>
               </div>
             </div>
 
@@ -106,7 +108,11 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
                   : 'bg-emerald-100 text-emerald-800'
               }`}
             >
-              {newsCalc.urgencyLevel} ACTION
+              {newsCalc.urgencyLevel === 'URGENT' || newsCalc.totalScore >= 12
+                ? t('newAssessment.actionUrgent')
+                : newsCalc.urgencyLevel === 'HIGH'
+                ? t('newAssessment.actionHigh')
+                : t('newAssessment.actionNormal')}
             </div>
           </div>
 
@@ -114,7 +120,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Patient Name
+                {t('newAssessment.patientName')}
               </label>
               <input
                 type="text"
@@ -127,7 +133,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
 
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Patient ID
+                {t('newAssessment.patientId')}
               </label>
               <input
                 type="text"
@@ -139,7 +145,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
 
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Age
+                {t('newAssessment.age')}
               </label>
               <input
                 type="number"
@@ -151,30 +157,30 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
 
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Gender
+                {t('newAssessment.gender')}
               </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as 'Male' | 'Female' | 'Other')}
                 className="w-full px-3 py-2.5 rounded-xl bg-[#f4f2fd] dark:bg-[#221a1f] border border-[#eeedf7] dark:border-[#382a33] text-sm focus:outline-none focus:border-[#b50063]"
               >
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
+                <option value="Female">{t('newAssessment.genderOptions.female')}</option>
+                <option value="Male">{t('newAssessment.genderOptions.male')}</option>
+                <option value="Other">{t('newAssessment.genderOptions.other')}</option>
               </select>
             </div>
           </div>
 
           {/* Vitals Input Grid */}
           <span className="text-xs font-bold text-[#b50063] dark:text-[#ffb0c9] uppercase tracking-wider mt-2 block">
-            Clinical Vitals Entry
+            {t('newAssessment.clinicalVitalsEntry')}
           </span>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Heart Rate */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Heart Rate (BPM)
+                {t('newAssessment.heartRate')}
               </label>
               <input
                 type="number"
@@ -187,7 +193,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             {/* SpO2 */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                SpO2 (%)
+                {t('newAssessment.spo2')}
               </label>
               <input
                 type="number"
@@ -200,7 +206,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             {/* Systolic BP */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Systolic BP (mmHg)
+                {t('newAssessment.systolicBp')}
               </label>
               <input
                 type="number"
@@ -213,7 +219,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             {/* Diastolic BP */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Diastolic BP (mmHg)
+                {t('newAssessment.diastolicBp')}
               </label>
               <input
                 type="number"
@@ -226,7 +232,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             {/* Temperature */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Temp ({vitals.tempUnit})
+                {t('newAssessment.temperature')} ({vitals.tempUnit})
               </label>
               <input
                 type="number"
@@ -240,7 +246,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
             {/* Respiratory Rate */}
             <div>
               <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-                Resp Rate (/min)
+                {t('newAssessment.respRate')}
               </label>
               <input
                 type="number"
@@ -254,7 +260,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
           {/* Target Facility Selection */}
           <div>
             <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">
-              Target Referral Facility
+              {t('newAssessment.facility')}
             </label>
             <select
               value={targetFacility}
@@ -274,13 +280,13 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
               onClick={onClose}
               className="flex-1 py-3 rounded-full border border-[#e3e1ec] dark:border-[#44333e] text-sm font-bold text-[#5b3f47] dark:text-[#e3bdc7]"
             >
-              Cancel
+              {t('newAssessment.close')}
             </button>
             <button
               type="submit"
               className="flex-1 py-3 rounded-full bg-[#b50063] hover:bg-[#a00057] text-white text-sm font-bold shadow-lg shadow-[#b50063]/30"
             >
-              Save & Open Referral
+              {t('newAssessment.saveButton')}
             </button>
           </div>
         </form>

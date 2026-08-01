@@ -1,5 +1,6 @@
 import React from 'react';
 import { Patient } from '../types';
+import { useTranslation } from '../i18n.tsx';
 
 interface DashboardViewProps {
   patients: Patient[];
@@ -18,6 +19,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onToggleOffline,
   onLoadDemoData,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col w-full gap-6 animate-fadeIn pb-6">
       {/* Hero Section with Decorative Blob Animation */}
@@ -48,16 +50,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               bolt
             </span>
             <span className="text-[11px] font-bold text-[#b50063] dark:text-[#ffb0c9] uppercase tracking-wider">
-              Clinical Intelligence
+              {t('dashboard.heroBadge')}
             </span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1a1b22] dark:text-[#f1effa] leading-tight tracking-tight">
-            Catch deterioration before the <span className="text-[#b50063] dark:text-[#ffb0c9]">referral.</span>
+            {t('dashboard.heroTitle')}
           </h2>
 
           <p className="text-sm sm:text-base text-[#5b3f47] dark:text-[#e3bdc7] leading-relaxed max-w-xs">
-            Early warning and referral coordination for rural healthcare.
+            {t('dashboard.heroSubtitle')}
           </p>
         </div>
 
@@ -66,7 +68,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={onStartAssessment}
             className="w-full bg-[#b50063] hover:bg-[#a00057] text-white py-3.5 px-6 rounded-full font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-[#b50063]/25 active:scale-[0.98] transition-all cursor-pointer"
           >
-            <span>Start Assessment</span>
+            <span>{t('dashboard.startAssessment')}</span>
             <span className="material-symbols-outlined text-xl">arrow_forward</span>
           </button>
         </div>
@@ -86,11 +88,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               }`}
             />
             <span className="text-xs font-bold text-[#1a1b22] dark:text-[#f1effa]">
-              {isOffline ? 'Offline Active' : 'Offline Ready'}
+              {isOffline ? t('dashboard.offlineActive') : t('dashboard.offlineReady')}
             </span>
           </div>
           <p className="text-[11px] text-[#5b3f47] dark:text-[#e3bdc7] leading-snug z-10">
-            Syncs automatically when connected.
+            {t('dashboard.offlineDescription')}
           </p>
           <span className="material-symbols-outlined absolute -right-2 -bottom-2 text-5xl text-[#e3e1ec] dark:text-[#382a33] opacity-60 pointer-events-none group-hover:scale-110 transition-transform">
             cloud_off
@@ -107,11 +109,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               clinical_notes
             </span>
             <span className="text-xs font-bold text-[#1a1b22] dark:text-[#f1effa]">
-              Demo Patient
+              {t('dashboard.demoPatient')}
             </span>
           </div>
           <p className="text-[11px] text-[#5b3f47] dark:text-[#e3bdc7] leading-snug">
-            Explore tool with test data.
+            {t('dashboard.demoDescription')}
           </p>
         </button>
       </div>
@@ -120,13 +122,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-[#5b3f47] dark:text-[#e3bdc7] uppercase tracking-widest">
-            Recent Activity
+            {t('dashboard.recentActivity')}
           </h3>
           <span
             onClick={onStartAssessment}
             className="text-xs font-semibold text-[#b50063] dark:text-[#ffb0c9] cursor-pointer hover:underline"
           >
-            View All ({patients.length})
+            {t('dashboard.viewAll')} ({patients.length})
           </span>
         </div>
 
@@ -183,7 +185,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="mt-4 flex flex-col items-center gap-2 opacity-70">
         <div className="w-16 h-1 bg-[#e3e1ec] dark:bg-[#382a33] rounded-full" />
         <p className="text-xs text-[#5b3f47] dark:text-[#e3bdc7] text-center max-w-[220px]">
-          Trusted by health posts across the Northern District.
+          {t('dashboard.footer')}
         </p>
       </div>
     </div>

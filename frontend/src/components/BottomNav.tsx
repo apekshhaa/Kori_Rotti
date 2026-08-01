@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavTab } from '../types';
+import { useTranslation } from '../i18n.tsx';
 
 interface BottomNavProps {
   activeTab: NavTab;
@@ -7,10 +8,11 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
   const tabs: { id: NavTab; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'assessments', label: 'Assessments', icon: 'clinical_notes' },
-    { id: 'analytics', label: 'Analytics', icon: 'monitoring' },
+    { id: 'dashboard', label: t('bottomNav.dashboard'), icon: 'dashboard' },
+    { id: 'assessments', label: t('bottomNav.assessments'), icon: 'clinical_notes' },
+    { id: 'analytics', label: t('bottomNav.analytics'), icon: 'monitoring' },
   ];
 
   return (
