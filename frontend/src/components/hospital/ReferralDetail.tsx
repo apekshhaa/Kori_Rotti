@@ -293,36 +293,6 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
         </div>
       </div>
 
-      {/* Coordination Panel */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-[#382a33] bg-slate-50 dark:bg-[#221a1f] p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">AI Coordinator</h3>
-          <span className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>LIVE</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-white dark:bg-[#1a1316] p-3 border border-slate-200 dark:border-[#382a33]">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Countdown</p>
-            <p className="text-lg font-black text-slate-900 dark:text-[#f1effa]">{countdownText}</p>
-          </div>
-          <div className="rounded-xl bg-white dark:bg-[#1a1316] p-3 border border-slate-200 dark:border-[#382a33]">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Checklist Ready</p>
-            <p className="text-lg font-black text-slate-900 dark:text-[#f1effa]">{readinessPercent}%</p>
-          </div>
-        </div>
-        {referral.aiDecision && (
-          <div className="rounded-xl border border-slate-200 dark:border-[#382a33] bg-white dark:bg-[#1a1316] p-3">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">AI Decision</p>
-            <p className="text-sm font-black text-slate-900 dark:text-[#f1effa] uppercase">{referral.aiDecision}</p>
-            {referral.aiReason && <p className="mt-1 text-sm text-slate-600 dark:text-[#e3bdc7]">{referral.aiReason}</p>}
-            {referral.aiExplanation.length > 0 && (
-              <ul className="mt-2 list-disc pl-4 text-xs text-slate-600 dark:text-[#e3bdc7] space-y-1">
-                {referral.aiExplanation.map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Preparation Checklist */}
       <PreparationChecklist
         referralId={referral.id}

@@ -52,9 +52,10 @@ const saveReferral = async (referralData) => {
         patientId,
         referralId,
         patientToken,
+        timestamp: payload.timestamp || new Date(),
 
         // Existing fields
-        createdAt: new Date(),
+        createdAt: payload.createdAt || new Date(),
 
         smsStatus: "pending",
 
@@ -121,7 +122,9 @@ const getReferralById = async (referralId) => {
     const { id: legacyId, ...rest } = data || {};
 
     return {
-        id: doc.id,        patientToken: payload.patientToken || doc.id,        ...rest,
+        id: doc.id,
+        patientToken: rest.patientToken || doc.id,
+        ...rest,
     };
 
 };
@@ -163,13 +166,27 @@ const getIncomingReferrals = async () => {
 
 const updateReferralLifecycleStatus = async (referralId, status) => {
 
+    const updatePayload = {
+        referralStatus: status,
+        statusUpdatedAt: new Date()
+    };
+
+    if (status === "acknowledged") {
+        updatePayload.acknowledgedAt = new Date();
+    }
+
+    if (status === "arrived") {
+        updatePayload.arrivedAt = new Date();
+    }
+
+    if (status === "checked_in") {
+        updatePayload.checkedInAt = new Date();
+    }
+
     await db
         .collection("referrals")
         .doc(referralId)
-        .update({
-            referralStatus: status,
-            statusUpdatedAt: new Date()
-        });
+        .update(updatePayload);
 
 };
 

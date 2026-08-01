@@ -48,6 +48,11 @@ export interface BackendReferral {
   checklistItems?: string[];
   completedChecklist?: string[];
   acknowledgementDeadline?: number | string;
+  acknowledgedAt?: number | string | Date;
+  arrivedAt?: number | string | Date;
+  checkedInAt?: number | string | Date;
+  createdAt?: number | string | Date;
+  statusUpdatedAt?: number | string | Date;
   aiDecision?: string;
   aiReason?: string;
   aiConfidence?: number;
@@ -132,6 +137,57 @@ export function generateCaregiverUrl(patientToken: string): string {
 
 export function isPublicAppUrlConfigured(): boolean {
   return Boolean(getPublicAppUrl());
+}
+
+function formatTimelineTime(value?: number | string | Date | null): string {
+  if (value === undefined || value === null || value === '') {
+    return '—';
+  }
+
+  const parsed = value instanceof Date
+    ? value.getTime()
+    : typeof value === 'number'
+      ? value
+      : Date.parse(String(value));
+
+  if (Number.isNaN(parsed)) {
+    return '—';
+  }
+
+  return new Date(parsed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildTimeline(raw: BackendReferral, status: 'sent' | 'acknowledged' | 'arrived' | 'checked_in', formattedEta: string) {
+  const sentAt = raw.timestamp ?? raw.createdAt ?? raw.statusUpdatedAt ?? Date.now();
+  const acknowledgedAt = raw.acknowledgedAt || raw.statusUpdatedAt || null;
+  const arrivedAt = raw.arrivedAt || (status === 'arrived' || status === 'checked_in' ? raw.statusUpdatedAt : null);
+  const checkedInAt = raw.checkedInAt || (status === 'checked_in' ? raw.statusUpdatedAt : null);
+
+  const timeline = [
+    { time: formatTimelineTime(sentAt), label: 'Risk threshold crossed' },
+    { time: formatTimelineTime(sentAt), label: 'Referral sent' },
+    { time: formatTimelineTime(sentAt), label: 'Hospital received alert' },
+  ];
+
+  if (acknowledgedAt) {
+    timeline.push({ time: formatTimelineTime(acknowledgedAt), label: 'Hospital acknowledged' });
+  }
+
+  if (arrivedAt) {
+    timeline.push({ time: formatTimelineTime(arrivedAt), label: 'Patient arrived' });
+  } else if (status === 'arrived' || status === 'checked_in') {
+    timeline.push({ time: formatTimelineTime(sentAt), label: 'Patient arrived' });
+  }
+
+  if (checkedInAt) {
+    timeline.push({ time: formatTimelineTime(checkedInAt), label: 'Patient checked in' });
+  } else if (status === 'checked_in') {
+    timeline.push({ time: formatTimelineTime(sentAt), label: 'Patient checked in' });
+  } else if (status !== 'checked_in') {
+    timeline.push({ time: `Expected ${formattedEta}`, label: 'Patient arrival' });
+  }
+
+  return timeline;
 }
 
 /**
@@ -247,23 +303,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
       ? Date.parse(raw.acknowledgementDeadline)
       : Date.now() + 10 * 60 * 1000;
 
-  const timeline = [
-    { time: '09:41', label: 'Risk threshold crossed' },
-    { time: '09:42', label: 'Referral sent' },
-    { time: '09:42', label: 'Hospital received alert' },
-  ];
-
-  if (status === 'acknowledged' || status === 'arrived' || status === 'checked_in') {
-    timeline.push({ time: '09:44', label: 'Hospital acknowledged' });
-  }
-  if (status === 'arrived' || status === 'checked_in') {
-    timeline.push({ time: '10:55', label: 'Patient arrived' });
-  }
-  if (status === 'checked_in') {
-    timeline.push({ time: '11:00', label: 'Patient checked in' });
-  } else {
-    timeline.push({ time: `Expected ${formattedEta}`, label: 'Patient arrival' });
-  }
+  const timeline = buildTimeline(raw, status, formattedEta);
 
   return {
     id,

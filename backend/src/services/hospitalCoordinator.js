@@ -69,7 +69,6 @@ async function generateChecklist(referral, hospital) {
   items.push('Oxygen Ready');
   items.push('Blood Available');
   items.push('Respiratory Technician Available');
-  items.push('Emergency Doctor Assigned');
   items.push('Ventilator Ready');
 
   // If hospital lacks a resource, keep it required so AI can reroute or wait
@@ -77,43 +76,90 @@ async function generateChecklist(referral, hospital) {
 }
 
 function matchResourceToItem(item, hospital) {
-  const res = hospital?.resources || hospital || {};
   const lower = String(item || '').toLowerCase();
+  const root = hospital || {};
+  const res = root.resources || root || {};
+  const candidates = [root, res].filter(Boolean);
+
+  const lookup = (keys) => {
+    for (const candidate of candidates) {
+      for (const key of keys) {
+        if (candidate && Object.prototype.hasOwnProperty.call(candidate, key)) {
+          const value = candidate[key];
+          if (value !== undefined && value !== null) {
+            return value;
+          }
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const asNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const asBoolean = (value) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value > 0;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return ['1', 'true', 'yes', 'y', 'available', 'ready'].includes(normalized);
+    }
+    return Boolean(value);
+  };
 
   // ICU
-  const icuBeds = (res.beds && res.beds.icu && Number(res.beds.icu.available || 0)) || Number(res.icuBeds || 0);
+  const icuBeds = asNumber(lookup(['icuBeds', 'icuBedsAvailable', 'availableIcuBeds'])) || (res.beds && res.beds.icu && Number(res.beds.icu.available || 0));
   if (lower.includes('icu')) return icuBeds > 0;
 
   // Oxygen (cylinders or equipment)
-  const oxygenCylinders = Number(res.oxygenCylinders || 0) || (res.equipment && Number(res.equipment.oxymeter?.available || 0));
-  if (lower.includes('oxygen')) return oxygenCylinders > 0 || Boolean(res.oxygenAvailable);
+  const oxygenCylinders = asNumber(lookup(['oxygenCylinders', 'oxygenAvailable', 'oxygen'])) || (res.equipment && Number(res.equipment.oxymeter?.available || 0));
+  if (lower.includes('oxygen')) return oxygenCylinders > 0 || asBoolean(lookup(['oxygenAvailable', 'oxygen'])) || Boolean(res.oxygenAvailable);
 
   // Blood (blood bank availability)
-  const bloodUnits = Number(res.bloodTypeOUnits || 0) || (res.supportServices && Number(res.supportServices.bloodBank?.units || 0));
-  if (lower.includes('blood')) return bloodUnits > 0 || Boolean(res.bloodAvailable) || Boolean(res.supportServices?.bloodBank?.available);
+  const bloodUnits = asNumber(lookup(['bloodTypeOUnits', 'bloodUnits', 'bloodAvailable'])) || (res.supportServices && Number(res.supportServices.bloodBank?.units || 0));
+  if (lower.includes('blood')) return bloodUnits > 0 || asBoolean(lookup(['bloodAvailable'])) || Boolean(res.supportServices?.bloodBank?.available);
 
   // Respiratory techs / teams
-  const respiratoryTeam = Boolean(res.teams?.respiratory?.available) || Boolean(res.respiratoryTherapists || res.respiratoryTherapistsAvailable);
+  const respiratoryTeam = asBoolean(lookup(['respiratoryTherapistsAvailable', 'respiratoryTherapists', 'respiratoryTeamAvailable'])) || Boolean(res.teams?.respiratory?.available) || Boolean(res.respiratoryTherapists || res.respiratoryTherapistsAvailable);
   if (lower.includes('respiratory')) return respiratoryTeam;
 
   // Doctor / emergency team
-  const doctorAvailable = Boolean(res.teams?.emergency?.available) || Boolean(res.doctorsAvailable || res.doctorAvailable) || (res.teams && Object.values(res.teams).some(t => t?.available));
+  const doctorAvailable = asBoolean(lookup(['doctorAvailable', 'doctorsAvailable', 'emergencyDoctorAvailable', 'emergencyDoctorsAvailable'])) || Boolean(res.teams?.emergency?.available) || (res.teams && Object.values(res.teams).some((team) => asBoolean(team?.available)));
   if (lower.includes('doctor')) return doctorAvailable;
 
   // Ventilator
-  const ventilators = Number(res.ventilators || 0) || Number(res.equipment?.ventilators?.available || 0);
+  const ventilators = asNumber(lookup(['ventilators', 'ventilatorsAvailable'])) || Number(res.equipment?.ventilators?.available || 0);
   if (lower.includes('ventilator')) return ventilators > 0 || Boolean(res.ventilatorsAvailable);
 
   return false;
 }
 
+function getOllamaSettings() {
+  const configuredHost = process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || '';
+  const enabled = process.env.OLLAMA_ENABLED === 'true' || Boolean(configuredHost);
+
+  return {
+    enabled,
+    host: configuredHost || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'llama3.2:3b',
+  };
+}
+
 async function callOllama(reasoningPayload) {
+  const { enabled, host, model } = getOllamaSettings();
+  if (!enabled) {
+    return null;
+  }
+
   try {
-    const response = await fetch('http://localhost:11434/api/generate', {
+    const response = await fetch(`${host.replace(/\/$/, '')}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.2:3b',
+        model,
         stream: false,
         format: 'json',
         prompt: `You are an autonomous hospital coordination agent. Return structured JSON only.\n${JSON.stringify(reasoningPayload)}`,
@@ -121,14 +167,13 @@ async function callOllama(reasoningPayload) {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama request failed: ${response.status}`);
+      return null;
     }
 
     const data = await response.json();
     const content = data?.response || '{}';
     return JSON.parse(content);
   } catch (error) {
-    console.warn('Ollama unavailable, falling back to deterministic reasoning:', error.message);
     return null;
   }
 }
@@ -201,6 +246,15 @@ function computeReadinessScore(hospital, requiredResources) {
 
 function getReferralDocumentId(referral) {
   return referral?.firestoreId || referral?.documentId || referral?.referralId || referral?.id;
+}
+
+function sanitizeReferralPayload(payload = {}) {
+  return Object.entries(payload || {}).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
 }
 
 function pickBestHospital(referral, hospitals = DEFAULT_HOSPITALS) {
@@ -299,8 +353,9 @@ async function acknowledgeReferral(referralId, payload = {}) {
   };
 
   const documentId = getReferralDocumentId({ id: referralId });
-  await db.collection('referrals').doc(documentId).set(updatePayload, { merge: true });
-  return updatePayload;
+  const safePayload = sanitizeReferralPayload(updatePayload);
+  await db.collection('referrals').doc(documentId).set(safePayload, { merge: true, ignoreUndefinedProperties: true });
+  return safePayload;
 }
 
 async function rerouteReferral(referralId, newHospital, payload = {}) {
@@ -326,8 +381,9 @@ async function rerouteReferral(referralId, newHospital, payload = {}) {
     aiUpdatedAt: new Date().toISOString(),
   };
 
-  await db.collection('referrals').doc(documentId).set(updatePayload, { merge: true });
-  return updatePayload;
+  const safePayload = sanitizeReferralPayload(updatePayload);
+  await db.collection('referrals').doc(documentId).set(safePayload, { merge: true, ignoreUndefinedProperties: true });
+  return safePayload;
 }
 
 async function monitorReferral(referral) {
@@ -346,7 +402,8 @@ async function monitorReferral(referral) {
     const checklist = await generateChecklist(referral, hospital);
     const documentId = getReferralDocumentId(referral);
     try {
-      await db.collection('referrals').doc(documentId).set({ checklistItems: checklist }, { merge: true });
+      const payload = sanitizeReferralPayload({ checklistItems: checklist });
+      await db.collection('referrals').doc(documentId).set(payload, { merge: true, ignoreUndefinedProperties: true });
       referral.checklistItems = checklist;
     } catch (err) {
       console.warn('Failed to persist generated checklist:', err.message);
@@ -387,7 +444,8 @@ async function monitorReferral(referral) {
   // Persist completed checklist
   const documentId = getReferralDocumentId(referral);
   try {
-    await db.collection('referrals').doc(documentId).set({ completedChecklist: Array.from(completed) }, { merge: true });
+    const payload = sanitizeReferralPayload({ completedChecklist: Array.from(completed) });
+    await db.collection('referrals').doc(documentId).set(payload, { merge: true, ignoreUndefinedProperties: true });
     referral.completedChecklist = Array.from(completed);
   } catch (err) {
     console.warn('Unable to persist completed checklist:', err.message);
@@ -408,7 +466,8 @@ async function monitorReferral(referral) {
   };
 
   try {
-    await db.collection('referrals').doc(documentId).set(updatePayload, { merge: true });
+    const payload = sanitizeReferralPayload(updatePayload);
+    await db.collection('referrals').doc(documentId).set(payload, { merge: true, ignoreUndefinedProperties: true });
   } catch (error) {
     console.warn('Unable to persist coordinator decision:', error.message);
   }
@@ -448,7 +507,7 @@ function payloadFromReferral(referral) {
   };
 }
 
-async function startCoordinatorMonitoring(intervalMs = 15000) {
+async function startCoordinatorMonitoring(intervalMs = 300000) {
   const run = async () => {
     const snapshot = await db.collection('referrals').get();
     const referrals = snapshot.docs
@@ -471,4 +530,6 @@ module.exports = {
   startCoordinatorMonitoring,
   acknowledgeReferral,
   rerouteReferral,
+  matchResourceToItem,
+  sanitizeReferralPayload,
 };

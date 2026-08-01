@@ -197,7 +197,6 @@ const createReferral = async (req, res) => {
                 "Oxygen Ready",
                 "Blood Available",
                 "Respiratory Technician Available",
-                "Emergency Doctor Assigned",
                 "Ventilator Ready"
             ],
             completedChecklist: req.body.completedChecklist || [],
