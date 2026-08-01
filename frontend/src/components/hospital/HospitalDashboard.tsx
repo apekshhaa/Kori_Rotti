@@ -9,7 +9,7 @@ import {
 import { HospitalHeader } from './HospitalHeader';
 import { HospitalSummaryStrip } from './HospitalSummaryStrip';
 import { ReferralQueueItem } from './ReferralQueueItem';
-import { ReferralDetail } from './ReferralDetail';
+import { HospitalPreparation } from './HospitalPreparation';
 
 interface HospitalDashboardProps {
   isDarkMode: boolean;
@@ -330,9 +330,14 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
             {/* Detail Column (Right) */}
             <div className="lg:col-span-7">
               {selectedReferral ? (
-                <ReferralDetail
+                <HospitalPreparation
                   referral={selectedReferral}
                   onStatusUpdate={handleStatusUpdate}
+                  onReferralUpdate={(updated) => {
+                    setReferrals((prev) =>
+                      prev.map((r) => (r.id === updated.id ? updated : r))
+                    );
+                  }}
                   onDelete={handleDeleteReferral}
                   onDismissObservation={handleDismissObservation}
                   onClose={() => setSelectedReferralId(null)}
