@@ -29,7 +29,10 @@ const {
     getIncoming,
     updateReferralLifecycle,
     deleteReferral,
-    updateReferralChecklist
+    updateReferralChecklist,
+    getCaregiverPage,
+    submitCaregiverObservation,
+    dismissObservation
 } = require("../controllers/referralController");
 
 const validateReferral = require("../middleware/validateReferral");
@@ -50,6 +53,12 @@ router.get(
 );
 
 
+// PATCH /api/referrals/:id/observations
+router.patch(
+    "/:id/observations",
+    dismissObservation
+);
+
 // PATCH /api/referrals/:id/status
 router.patch(
     "/:id/status",
@@ -63,6 +72,18 @@ router.patch('/:id/checklist', updateReferralChecklist);
 router.delete(
     "/:id",
     deleteReferral
+);
+
+// GET /api/referrals/caregiver/:patientToken
+router.get(
+    "/caregiver/:patientToken",
+    getCaregiverPage
+);
+
+// POST /api/referrals/caregiver/:patientToken/observations
+router.post(
+    "/caregiver/:patientToken/observations",
+    submitCaregiverObservation
 );
 
 // GET /api/referrals/:id

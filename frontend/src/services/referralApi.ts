@@ -57,6 +57,15 @@ export interface BackendReferral {
   historyScores?: { time: string; score: number }[];
 }
 
+export interface CaregiverObservation {
+  id: string;
+  patientId?: string;
+  patientName?: string;
+  text: string;
+  timestamp: string | Date;
+  observedBy?: string;
+}
+
 export interface NormalizedReferral {
   id: string;
   referralId: string;
@@ -79,6 +88,7 @@ export interface NormalizedReferral {
     respiration: number;
   };
   caregiverFlags: string[];
+  caregiverObservations: CaregiverObservation[];
   hospitalId: string;
   status: 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
   eta: number | null; // minutes
@@ -95,9 +105,34 @@ export interface NormalizedReferral {
   aiRecommendedHospitalName: string | null;
   trend?: { time: string; score: number; pulse?: number; spo2?: number; respiration?: number }[];
   timeline: { time: string; label: string }[];
+  patientToken?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export function getPublicAppUrl(): string {
+  const configuredUrl = (import.meta.env.VITE_PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || '').trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    return window.location.origin.replace(/\/$/, '');
+  }
+
+  return '';
+}
+
+export function generateCaregiverUrl(patientToken: string): string {
+  const baseUrl = getPublicAppUrl();
+  if (!baseUrl) {
+    return '';
+  }
+
+  return `${baseUrl}/caregiver/${encodeURIComponent(patientToken)}`;
+}
+
+export function isPublicAppUrlConfigured(): boolean {
+  return Boolean(getPublicAppUrl());
+}
 
 /**
  * Normalizes backend responses into a unified referral model.
@@ -161,6 +196,20 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
 
   const hospitalId = raw.hospitalId || 'dist-hospital-1';
   const status = (raw.referralStatus || raw.status || 'sent').toLowerCase() as 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
+  const patientToken = (raw as any).patientToken || (raw as any).id || (raw as any).referralId || (raw as any).patientId || '';
+
+  const caregiverObservations: CaregiverObservation[] = Array.isArray((raw as any).caregiverObservations)
+    ? (raw as any).caregiverObservations
+        .map((item: any) => ({
+          id: item.id || `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+          patientId: item.patientId,
+          patientName: item.patientName,
+          text: item.text || item.observation || '',
+          timestamp: item.timestamp || item.createdAt || new Date().toISOString(),
+          observedBy: item.observedBy || 'Caregiver',
+        }))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    : [];
 
   // ETA formatting
   const eta = raw.eta !== undefined && raw.eta !== null ? Number(raw.eta) : 75;
@@ -230,6 +279,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
     riskLevel,
     vitals,
     caregiverFlags,
+    caregiverObservations,
     hospitalId,
     status,
     eta,
@@ -245,6 +295,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
     aiRecommendedHospitalId: raw.aiRecommendedHospitalId || null,
     aiRecommendedHospitalName: raw.aiRecommendedHospitalName || null,
     timeline,
+    patientToken,
   };
 }
 
@@ -347,8 +398,13 @@ export async function fetchIncomingReferrals(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/referrals/incoming`, {
-      headers: { Accept: 'application/json' },
+    const res = await fetch('/api/referrals/incoming', {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
     });
 
     if (!res.ok) {
@@ -386,7 +442,7 @@ export async function updateReferralStatus(
 
   try {
     const encodedId = encodeURIComponent(referralId);
-    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}/status`, {
+    const res = await fetch(`/api/referrals/${encodedId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -434,7 +490,7 @@ export async function deleteReferral(
 
   try {
     const encodedId = encodeURIComponent(referralId);
-    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}`, {
+    const res = await fetch(`/api/referrals/${encodedId}`, {
       method: 'DELETE',
     });
 
@@ -452,7 +508,87 @@ export async function deleteReferral(
   return { success: true, isMock: true };
 }
 
+export async function getCaregiverPageData(patientToken: string): Promise<{ success: boolean; referral?: { patientName: string; patientId: string; patientToken?: string }; error?: string }> {
+  try {
+    const res = await fetch(`/api/referrals/caregiver/${encodeURIComponent(patientToken)}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, error: errorText || 'Unable to load patient details.' };
+    }
+
+    const data = await res.json();
+    return { success: true, referral: data.referral };
+  } catch (error) {
+    return { success: false, error: 'Unable to load patient details.' };
+  }
+}
+
+export function broadcastObservationUpdate(patientToken?: string): void {
+  if (typeof window === 'undefined') return;
+
+  const payload = { patientToken, timestamp: Date.now() };
+  try {
+    localStorage.setItem('setu_observation_update', JSON.stringify(payload));
+  } catch {
+    // ignore storage errors
+  }
+
+  window.dispatchEvent(new CustomEvent('caregiver-observation-updated', { detail: payload }));
+}
+
+export async function submitCaregiverObservation(patientToken: string, patientName: string, text: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/referrals/caregiver/${encodeURIComponent(patientToken)}/observations`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+      body: JSON.stringify({ text, patientName, patientToken }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, error: errorText || 'Unable to submit observation.' };
+    }
+
+    broadcastObservationUpdate(patientToken);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: 'Unable to submit observation.' };
+  }
+}
+
+export async function dismissObservation(referralId: string, observationId: string): Promise<{ success: boolean; isMock: boolean }> {
+  try {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`/api/referrals/${encodedId}/observations`, {
+      method: 'PATCH',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+      body: JSON.stringify({ observationId }),
+    });
+
+    return { success: res.ok, isMock: false };
+  } catch (err) {
+    return { success: false, isMock: false };
+  }
+}
+
 export async function createReferral(patient: Patient, caregiverFlags: string[] = ['Breathing harder']): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
+  const patientToken = `${patient.patientId || 'patient'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const newRaw: BackendReferral = {
     id: patient.referralRef || `REF-2024-${Math.floor(100 + Math.random() * 900)}`,
     patientId: patient.patientId,
@@ -479,6 +615,8 @@ export async function createReferral(patient: Patient, caregiverFlags: string[] 
       respiration: patient.vitals.respiratoryRate || 24,
     },
     caregiverFlags,
+    caregiverObservations: [],
+    patientToken,
     hospitalId: 'dist-hospital-1',
     status: 'sent',
     eta: 75,
@@ -494,7 +632,7 @@ export async function createReferral(patient: Patient, caregiverFlags: string[] 
   inMemoryReferrals = [newRaw, ...inMemoryReferrals];
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/referrals`, {
+    const res = await fetch('/api/referrals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newRaw),

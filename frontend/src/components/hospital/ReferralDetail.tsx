@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { NormalizedReferral } from '../../services/referralApi';
 import { PreparationChecklist } from './PreparationChecklist';
 import { ReferralTimeline } from './ReferralTimeline';
+import { CaregiverQrCard } from './CaregiverQrCard';
 
 interface ReferralDetailProps {
   referral: NormalizedReferral;
   onStatusUpdate: (referralId: string, newStatus: 'acknowledged' | 'arrived' | 'checked_in') => void;
   onDelete?: (referralId: string) => void;
+  onDismissObservation?: (referralId: string, observationId: string) => void;
   onClose?: () => void;
 }
 
@@ -14,6 +16,7 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
   referral,
   onStatusUpdate,
   onDelete,
+  onDismissObservation,
   onClose,
 }) => {
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
@@ -206,12 +209,20 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
         </div>
       </div>
 
+      <CaregiverQrCard referral={referral} />
+
       {/* Caregiver Observations */}
-      {referral.caregiverFlags.length > 0 && (
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Caregiver Observations
           </h3>
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-[#e3bdc7]">
+            Last Updated: {referral.caregiverObservations.length > 0 ? new Date(referral.caregiverObservations[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+          </span>
+        </div>
+
+        {referral.caregiverFlags.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {referral.caregiverFlags.map((flag, idx) => (
               <span
@@ -224,8 +235,42 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
               </span>
             ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {referral.caregiverObservations.length > 0 ? (
+          <div className="flex flex-col gap-2.5 rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 dark:border-amber-800/50 dark:bg-amber-950/30">
+            {referral.caregiverObservations.slice(0, 5).map((observation) => (
+              <div key={observation.id} className="rounded-lg border border-amber-200/70 bg-white/80 p-3 shadow-xs dark:border-amber-800/60 dark:bg-[#221a1f]/70">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">
+                    {new Date(observation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-[#e3bdc7]">
+                      {observation.observedBy || 'Caregiver'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDismissObservation?.(referral.id, observation.id);
+                      }}
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    >
+                      Seen
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-1 text-sm font-medium text-slate-700 dark:text-[#f1effa]">“{observation.text}”</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium text-slate-500 dark:border-[#382a33] dark:bg-[#221a1f] dark:text-[#e3bdc7]">
+            No caregiver observations yet.
+          </div>
+        )}
+      </div>
 
       {/* Recent Trend */}
       <div className="flex flex-col gap-2 bg-slate-50 dark:bg-[#221a1f] p-4 rounded-xl border border-slate-200/80 dark:border-[#382a33]">
