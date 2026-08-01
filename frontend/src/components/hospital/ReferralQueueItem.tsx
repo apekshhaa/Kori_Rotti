@@ -1,5 +1,6 @@
 import React from 'react';
-import { NormalizedReferral } from '../../services/referralApi';
+import QRCode from 'react-qr-code';
+import { generateCaregiverUrl, isPublicAppUrlConfigured, NormalizedReferral } from '../../services/referralApi';
 
 interface ReferralQueueItemProps {
   referral: NormalizedReferral;
@@ -35,6 +36,9 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
         return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800';
     }
   };
+
+  const caregiverUrl = generateCaregiverUrl(referral.patientToken || referral.id);
+  const hasPublicUrl = isPublicAppUrlConfigured();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,13 +167,31 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
           </button>
         </div>
 
-        {/* Caregiver Flag if present */}
-        {referral.caregiverFlags.length > 0 && (
-          <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-md border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1.5 w-fit">
-            <span className="material-symbols-outlined text-xs">visibility</span>
-            <span>{referral.caregiverFlags.join(', ')}</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {referral.caregiverObservations.length > 0 && (
+              <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-md border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1.5 w-fit">
+                <span className="material-symbols-outlined text-xs">visibility</span>
+                <span>{referral.caregiverObservations[0].text}</span>
+              </div>
+            )}
+            {referral.caregiverObservations.length > 0 && (
+              <span className="rounded-full bg-[#84cc16] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-950">
+                New
+              </span>
+            )}
           </div>
-        )}
+
+          <div className="rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-[#382a33] dark:bg-[#221a1f]">
+            {caregiverUrl ? (
+              <QRCode value={caregiverUrl} size={56} level="M" />
+            ) : (
+              <div className="flex h-[56px] w-[56px] items-center justify-center rounded-lg bg-slate-100 text-[8px] font-semibold text-slate-500">
+                QR
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

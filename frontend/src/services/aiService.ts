@@ -13,7 +13,7 @@ export interface TrendPredictionResponse {
   prediction: TrendPrediction;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export async function predictTrend(readings: TrendReading[], currentRiskScore?: number): Promise<TrendPrediction> {
   const response = await axios.post<TrendPredictionResponse>(`${API_BASE_URL}/api/ai/trend`, {

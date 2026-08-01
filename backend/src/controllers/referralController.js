@@ -124,21 +124,29 @@ const {
     getReferralById,
     getIncomingReferrals,
     updateReferralLifecycleStatus,
-    deleteReferralById
+    deleteReferralById,
+    getReferralByToken,
+    addCaregiverObservation,
+    dismissCaregiverObservation
 } = require("../services/firebaseService");
 
 const {
     sendReferralSMS
 } = require("../services/smsService");
+const { generateCaregiverUrl } = require("../utils/publicUrl");
 
 
 const createReferral = async (req, res) => {
 
     try {
 
+        const patientToken = req.body.patientToken || null;
+
         // Prepare referral data
         const referral = {
             ...req.body,
+            patientToken,
+            publicCaregiverUrl: generateCaregiverUrl(patientToken || "patient"),
 
             // Hospital information
             hospitalId: "dist-hospital-1",
@@ -463,10 +471,108 @@ const deleteReferral = async (req, res) => {
     }
 };
 
+const getCaregiverPage = async (req, res) => {
+    try {
+        const referral = await getReferralByToken(req.params.patientToken);
+
+        if (!referral) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient link not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            referral: {
+                id: referral.id,
+                referralId: referral.referralId || referral.id,
+                patientId: referral.patientId,
+                patientName: referral.patientName,
+                patientToken: referral.patientToken || req.params.patientToken || referral.id,
+            }
+        });
+    } catch (error) {
+        console.error("Error loading caregiver page:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to load caregiver page"
+        });
+    }
+};
+
+const submitCaregiverObservation = async (req, res) => {
+    try {
+        const { patientToken } = req.params;
+        const { text, patientName, patientToken: bodyPatientToken } = req.body;
+        const resolvedPatientToken = bodyPatientToken || patientToken;
+
+        if (!text || typeof text !== "string" || text.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Observation text is required"
+            });
+        }
+
+        const observation = await addCaregiverObservation(resolvedPatientToken, {
+            text: text.trim(),
+            patientName,
+            observedBy: "Caregiver"
+        });
+
+        return res.status(201).json({
+            success: true,
+            observation
+        });
+    } catch (error) {
+        console.error("Error submitting caregiver observation:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to submit observation"
+        });
+    }
+};
+
+const dismissObservation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { observationId } = req.body;
+
+        if (!observationId) {
+            return res.status(400).json({
+                success: false,
+                message: "Observation ID is required"
+            });
+        }
+
+        const removed = await dismissCaregiverObservation(id, observationId);
+
+        if (!removed) {
+            return res.status(404).json({
+                success: false,
+                message: "Referral not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true
+        });
+    } catch (error) {
+        console.error("Error dismissing caregiver observation:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to dismiss observation"
+        });
+    }
+};
+
 module.exports = {
     createReferral,
     getReferral,
     getIncoming,
     updateReferralLifecycle,
-    deleteReferral
+    deleteReferral,
+    getCaregiverPage,
+    submitCaregiverObservation,
+    dismissObservation
 };

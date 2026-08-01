@@ -3,6 +3,7 @@ import {
   fetchIncomingReferrals,
   updateReferralStatus,
   deleteReferral,
+  dismissObservation,
   NormalizedReferral,
 } from '../../services/referralApi';
 import { HospitalHeader } from './HospitalHeader';
@@ -31,6 +32,11 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
 
   const previousIdsRef = useRef<Set<string>>(new Set());
   const initialLoadCompletedRef = useRef<boolean>(false);
+  const selectedReferralIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedReferralIdRef.current = selectedReferralId;
+  }, [selectedReferralId]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -85,8 +91,8 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
     previousIdsRef.current = currentIds;
     setReferrals(sorted);
 
-    // Auto-select first referral if none selected
-    if (sorted.length > 0 && !selectedReferralId) {
+    // Auto-select first referral if none selected (read ref to avoid stale closure in poll interval)
+    if (sorted.length > 0 && !selectedReferralIdRef.current) {
       setSelectedReferralId(sorted[0].id);
     }
 
@@ -94,14 +100,40 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
   };
 
   useEffect(() => {
-    loadData(false);
+    const refreshDashboard = () => {
+      if (document.visibilityState === 'visible') {
+        void loadData(true);
+      }
+    };
 
-    // Poll every 5 seconds for live updates
+    const handleObservationUpdate = () => {
+      void loadData(true);
+    };
+
+    const handleStorageUpdate = (event: StorageEvent) => {
+      if (event.key === 'setu_observation_update') {
+        void loadData(true);
+      }
+    };
+
+    void loadData(false);
+
     const interval = setInterval(() => {
-      loadData(true);
-    }, 5000);
+      void loadData(true);
+    }, 2000);
 
-    return () => clearInterval(interval);
+    window.addEventListener('caregiver-observation-updated', handleObservationUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('focus', refreshDashboard);
+    document.addEventListener('visibilitychange', refreshDashboard);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('caregiver-observation-updated', handleObservationUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('focus', refreshDashboard);
+      document.removeEventListener('visibilitychange', refreshDashboard);
+    };
   }, []);
 
   const handleStatusUpdate = async (
@@ -146,6 +178,31 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
     }
 
     showToast('Referral and patient record deleted successfully.');
+  };
+
+  const handleDismissObservation = async (referralId: string, observationId: string) => {
+    const previousReferrals = referrals;
+    setReferrals((prev) =>
+      prev.map((referral) => {
+        if (referral.id !== referralId) {
+          return referral;
+        }
+
+        return {
+          ...referral,
+          caregiverObservations: referral.caregiverObservations.filter((item) => item.id !== observationId),
+        };
+      })
+    );
+
+    const result = await dismissObservation(referralId, observationId);
+    if (!result.success && !result.isMock) {
+      setReferrals(previousReferrals);
+      setToastMessage('Unable to remove message. Please try again.');
+      return;
+    }
+
+    showToast('Message marked as seen and removed.');
   };
 
   const selectedReferral = referrals.find((r) => r.id === selectedReferralId) || referrals[0];
@@ -282,6 +339,7 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
                     );
                   }}
                   onDelete={handleDeleteReferral}
+                  onDismissObservation={handleDismissObservation}
                   onClose={() => setSelectedReferralId(null)}
                 />
               ) : (
