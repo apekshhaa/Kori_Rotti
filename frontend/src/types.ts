@@ -16,6 +16,17 @@ export interface Vitals {
   respiratoryRate?: number; // breaths/min
 }
 
+export interface TrendReading {
+  timestamp: string;
+  pulse: number;
+  bpSys: number;
+  bpDia: number;
+  temperature: number;
+  spo2: number;
+  respiration: number;
+  ews: number;
+}
+
 export interface VitalScoreBreakdown {
   label: string;
   value: string;
