@@ -224,6 +224,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
     return '';
   }, [dataset.interventions, trendReadings]);
 
+  const currentEWSValue = selectedPatient?.newsScore ?? prediction?.currentEWS ?? 0;
+
   useEffect(() => {
     if (!selectedPatient) return;
 
@@ -235,7 +237,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
         const allReadings = dataset?.readings || [];
         const recentReadings = allReadings.slice(-3);
         setTrendReadings(allReadings);
-        const result = await predictTrend(recentReadings);
+        const result = await predictTrend(recentReadings, selectedPatient?.newsScore);
         setPrediction(result);
       } catch (error) {
         setPrediction(null);
@@ -483,7 +485,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#130f12] p-3 rounded-xl border border-[#382a33]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#e3bdc7]">Current EWS</span>
-              <div className="text-3xl font-extrabold text-white mt-1">{prediction.currentEWS}</div>
+              <div className="text-3xl font-extrabold text-white mt-1">{currentEWSValue}</div>
             </div>
             <div className="bg-[#130f12] p-3 rounded-xl border border-[#382a33]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#e3bdc7]">Predicted EWS (30 min)</span>

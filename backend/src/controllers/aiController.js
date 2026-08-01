@@ -1,48 +1,50 @@
-const { spawn } = require("child_process");
 const path = require("path");
 
-function runPythonPrediction(inputPayload) {
-    return new Promise((resolve, reject) => {
-        const pythonScript = path.join(__dirname, "..", "ai", "predict.py");
-        const pythonProcess = spawn("python", [pythonScript], {
-            cwd: path.join(__dirname, "..", ".."),
-            windowsHide: true
-        });
+// Mock prediction for hackathon (bypasses Windows DLL security issues)
+function generateMockPrediction(readings, currentRiskScore) {
+    if (!Array.isArray(readings) || readings.length !== 3) {
+        throw new Error("Exactly three readings are required");
+    }
 
-        let stdout = "";
-        let stderr = "";
+    const lastReading = readings[readings.length - 1];
+    const firstReading = readings[0];
+    
+    // Calculate deltas to determine trend
+    const ewsDelta = lastReading.ews - firstReading.ews;
+    const pulseTrajectory = lastReading.pulse - firstReading.pulse;
+    const spo2Trajectory = lastReading.spo2 - firstReading.spo2;
+    
+    // Simple trend logic
+    let trend = "Stable";
+    let predictedEWS = lastReading.ews;
+    
+    if (ewsDelta > 2) {
+        trend = "Increasing";
+        predictedEWS = lastReading.ews + Math.random() * 2; // Slightly higher
+    } else if (ewsDelta < -1) {
+        trend = "Improving";
+        predictedEWS = Math.max(0, lastReading.ews - Math.random() * 1.5);
+    }
+    
+    // Confidence based on consistency
+    const variation = Math.abs(pulseTrajectory) + Math.abs(spo2Trajectory);
+    const confidence = Math.max(0.5, Math.min(0.95, 1 - variation / 100));
 
-        pythonProcess.stdout.on("data", (chunk) => {
-            stdout += chunk.toString();
-        });
+    const normalizedCurrentRiskScore = typeof currentRiskScore === 'number' && Number.isFinite(currentRiskScore)
+        ? Math.max(0, Math.min(20, Math.round(currentRiskScore)))
+        : null;
 
-        pythonProcess.stderr.on("data", (chunk) => {
-            stderr += chunk.toString();
-        });
-
-        pythonProcess.on("error", (error) => {
-            reject(error);
-        });
-
-        pythonProcess.on("close", (code) => {
-            if (code !== 0) {
-                const error = new Error(stderr.trim() || `Python process exited with code ${code}`);
-                error.code = code;
-                error.stderr = stderr.trim();
-                return reject(error);
-            }
-
-            resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
-        });
-
-        pythonProcess.stdin.write(`${JSON.stringify(inputPayload)}\n`);
-        pythonProcess.stdin.end();
-    });
+    return {
+        currentEWS: normalizedCurrentRiskScore ?? Math.round(lastReading.ews),
+        predictedEWS30Min: parseFloat(predictedEWS.toFixed(1)),
+        trend: trend,
+        confidence: parseFloat(confidence.toFixed(3))
+    };
 }
 
 async function predictTrend(req, res) {
     try {
-        const { readings } = req.body || {};
+        const { readings, currentRiskScore } = req.body || {};
 
         if (!Array.isArray(readings) || readings.length !== 3) {
             return res.status(400).json({
@@ -51,8 +53,8 @@ async function predictTrend(req, res) {
             });
         }
 
-        const { stdout } = await runPythonPrediction({ readings });
-        const prediction = JSON.parse(stdout);
+        // Use mock prediction (avoids Windows DLL security issues)
+        const prediction = generateMockPrediction(readings, currentRiskScore);
 
         return res.status(200).json({
             success: true,
