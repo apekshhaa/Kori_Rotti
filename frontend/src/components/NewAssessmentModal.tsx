@@ -37,9 +37,9 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
     e.preventDefault();
     const finalName = name.trim() || `Patient ${patientId}`;
     const newPatient: Patient = {
-      id: patientId,
+      patientId: patientId,
       referralRef: `#REF-2024-${Math.floor(100 + Math.random() * 900)}`,
-      name: finalName,
+      patientName: finalName,
       age,
       gender,
       riskLevel:
@@ -53,7 +53,7 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
       newsScore: newsCalc.totalScore,
       vitals,
       lastAssessedTime: 'Just now',
-      targetFacility,
+      phc: targetFacility,
       facilityDistance: '4.2km',
       referralSent: false,
       historyScores: [{ time: 'Just now', score: newsCalc.totalScore }],

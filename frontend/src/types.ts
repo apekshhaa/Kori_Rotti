@@ -27,6 +27,22 @@ export interface TrendReading {
   ews: number;
 }
 
+export type InterventionType = 'medication' | 'oxygen' | 'iv' | 'nebulizer' | 'antibiotic' | 'referral';
+
+export type VitalKey = 'temperature' | 'pulse' | 'spo2' | 'respiration';
+
+export interface Intervention {
+  id: string;
+  type: InterventionType;
+  name: string;
+  dosage?: string;
+  reason: string;
+  time: string;
+  givenBy: string;
+  expectedEffect?: string;
+  affectedVitals: VitalKey[];
+}
+
 export interface VitalScoreBreakdown {
   label: string;
   value: string;
@@ -37,9 +53,9 @@ export interface VitalScoreBreakdown {
 }
 
 export interface Patient {
-  id: string; // e.g. "PHC-003" or "#4902"
+  patientId: string; // e.g. "PHC-003" or "#4902"
   referralRef?: string; // e.g. "#REF-2024-082"
-  name: string;
+  patientName: string;
   age?: number;
   gender?: string;
   photoUrl?: string;
@@ -48,10 +64,11 @@ export interface Patient {
   vitals: Vitals;
   caregiverFlags?: string[];
   lastAssessedTime: string;
-  targetFacility: string;
+  phc: string;
   facilityDistance: string;
   referralSent: boolean;
   referralSentTime?: string;
   historyScores: { time: string; score: number }[];
   recommendation: string;
+  interventions?: Intervention[];
 }

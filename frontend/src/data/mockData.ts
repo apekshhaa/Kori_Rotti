@@ -2,9 +2,9 @@ import { Patient } from '../types';
 
 export const INITIAL_PATIENTS: Patient[] = [
   {
-    id: 'PHC-003',
+    patientId: 'PHC-003',
     referralRef: '#REF-2024-082',
-    name: 'Lakshmi',
+    patientName: 'Lakshmi',
     age: 62,
     gender: 'Female',
     photoUrl:
@@ -21,7 +21,7 @@ export const INITIAL_PATIENTS: Patient[] = [
       respiratoryRate: 24,
     },
     lastAssessedTime: '2m ago',
-    targetFacility: 'District General Hospital',
+    phc: 'District General Hospital',
     facilityDistance: '4.2km',
     referralSent: false,
     historyScores: [
@@ -36,9 +36,9 @@ export const INITIAL_PATIENTS: Patient[] = [
       'The patient exhibits clinical instability. Immediate escalation to Medical Registrar and preparation for intensive care transfer is recommended.',
   },
   {
-    id: '#4902',
+    patientId: '#4902',
     referralRef: '#REF-2024-091',
-    name: 'Ramesh Patel',
+    patientName: 'Ramesh Patel',
     age: 54,
     gender: 'Male',
     riskLevel: 'HIGH RISK',
@@ -53,7 +53,7 @@ export const INITIAL_PATIENTS: Patient[] = [
       respiratoryRate: 26,
     },
     lastAssessedTime: '2h ago',
-    targetFacility: 'District Tertiary Trauma Center',
+    phc: 'District Tertiary Trauma Center',
     facilityDistance: '8.5km',
     referralSent: true,
     referralSentTime: '1h 45m ago',
@@ -66,9 +66,9 @@ export const INITIAL_PATIENTS: Patient[] = [
       'High clinical priority. Urgent ambulance transfer dispatched. Continuous SpO2 monitoring active.',
   },
   {
-    id: '#5118',
+    patientId: '#5118',
     referralRef: '#REF-2024-079',
-    name: 'Sunita Rao',
+    patientName: 'Sunita Rao',
     age: 41,
     gender: 'Female',
     riskLevel: 'STABLE',
@@ -83,7 +83,7 @@ export const INITIAL_PATIENTS: Patient[] = [
       respiratoryRate: 16,
     },
     lastAssessedTime: '5h ago',
-    targetFacility: 'Community Health Center',
+    phc: 'Community Health Center',
     facilityDistance: '1.8km',
     referralSent: false,
     historyScores: [
@@ -94,9 +94,9 @@ export const INITIAL_PATIENTS: Patient[] = [
     recommendation: 'Stabilized. Discharge or continue routine oral rehydration observation.',
   },
   {
-    id: '#5220',
+    patientId: '#5220',
     referralRef: '#REF-2024-095',
-    name: 'Anand Kumar',
+    patientName: 'Anand Kumar',
     age: 68,
     gender: 'Male',
     riskLevel: 'MODERATE',
@@ -111,7 +111,7 @@ export const INITIAL_PATIENTS: Patient[] = [
       respiratoryRate: 20,
     },
     lastAssessedTime: '30m ago',
-    targetFacility: 'District General Hospital',
+    phc: 'District General Hospital',
     facilityDistance: '4.2km',
     referralSent: false,
     historyScores: [

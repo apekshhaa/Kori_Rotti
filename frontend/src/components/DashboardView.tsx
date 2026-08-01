@@ -137,15 +137,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             return (
               <div
-                key={p.id}
-                onClick={() => onSelectPatient(p.id)}
+                key={p.patientId}
+                onClick={() => onSelectPatient(p.patientId)}
                 className="flex items-center gap-3 bg-[#ffffff] dark:bg-[#1a1316] p-4 rounded-2xl border border-[#eeedf7] dark:border-[#382a33] shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
               >
                 <div className="w-11 h-11 rounded-full bg-[#ffd9e3] dark:bg-[#4f1030] flex items-center justify-center flex-shrink-0 text-[#8e004c] dark:text-[#ffb0c9]">
                   {p.photoUrl ? (
                     <img
                       src={p.photoUrl}
-                      alt={p.name}
+                      alt={p.patientName}
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
@@ -155,7 +155,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-base font-bold text-[#1a1b22] dark:text-[#f1effa] truncate">
-                    {p.name} ({p.id})
+                    {p.patientName} ({p.patientId})
                   </span>
                   <span className="text-xs text-[#5b3f47] dark:text-[#e3bdc7]">
                     Last assessed {p.lastAssessedTime} • Score {p.newsScore}/20

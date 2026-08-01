@@ -7,7 +7,9 @@ const validateReferral = (req, res, next) => {
         phc,
         timestamp,
         vitals,
-        risk
+        risk,
+        riskScore,
+        riskLevel
     } = req.body;
 
     // Check required fields
@@ -53,7 +55,7 @@ const validateReferral = (req, res, next) => {
         });
     }
 
-    if (!risk) {
+    if (!risk && (riskScore === undefined || !riskLevel)) {
         return res.status(400).json({
             success: false,
             message: "Risk information is required"

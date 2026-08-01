@@ -360,12 +360,16 @@ export async function updateReferralStatus(
 export async function createReferral(patient: Patient, caregiverFlags: string[] = ['Breathing harder']): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
   const newRaw: BackendReferral = {
     id: patient.referralRef || `REF-2024-${Math.floor(100 + Math.random() * 900)}`,
-    patientId: patient.id,
-    patientName: patient.name,
+    patientId: patient.patientId,
+    patientName: patient.patientName,
     age: patient.age || 50,
     gender: patient.gender || 'Female',
-    phc: 'Demo Rural PHC',
+    phc: patient.phc || 'Demo Rural PHC',
     timestamp: Date.now(),
+    risk: {
+      score: patient.newsScore,
+      level: patient.newsScore >= 12 ? 'URGENT' : patient.newsScore >= 5 ? 'WATCH' : 'LOW',
+    },
     riskScore: patient.newsScore,
     riskLevel: patient.newsScore >= 12 ? 'URGENT' : patient.newsScore >= 5 ? 'WATCH' : 'LOW',
     vitals: {

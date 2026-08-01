@@ -21,7 +21,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
   const [subView, setSubView] = useState<AssessmentSubView>('referral');
 
   const selectedPatient =
-    patients.find((p) => p.id === activePatientId) || patients[0] || null;
+    patients.find((p) => p.patientId === activePatientId) || patients[0] || null;
 
   if (!selectedPatient) {
     return (
@@ -44,18 +44,18 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {patients.map((p) => {
-            const isSelected = p.id === selectedPatient.id;
+            const isSelected = p.patientId === selectedPatient.patientId;
             return (
               <button
-                key={p.id}
-                onClick={() => onSelectPatient(p.id)}
+                key={p.patientId}
+                onClick={() => onSelectPatient(p.patientId)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-[#b50063] text-white shadow-md shadow-[#b50063]/25'
                     : 'bg-[#eeedf7] dark:bg-[#2c2128] text-[#1a1b22] dark:text-[#f1effa] hover:bg-[#e3e1ec]'
                 }`}
               >
-                <span>{p.name}</span>
+                <span>{p.patientName}</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                     isSelected

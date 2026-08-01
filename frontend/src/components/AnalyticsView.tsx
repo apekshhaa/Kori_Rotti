@@ -4,11 +4,12 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import { Patient, TrendReading } from '../types';
+import { Patient, TrendReading, Intervention, InterventionType, VitalKey } from '../types';
 import { TREND_PATIENT_DATA } from '../data/trendPatientData';
 import { predictTrend, TrendPrediction } from '../services/aiService';
 
@@ -20,60 +21,154 @@ interface TrendChartProps {
   title: string;
   icon: string;
   color: string;
+  vitalKey: VitalKey;
   data: Array<{ label: string; value: number }>;
+  interventions?: Intervention[];
   delta: number;
   worsening: boolean;
   unit: string;
   latestValue: string;
 }
 
-const TrendChart: React.FC<TrendChartProps> = ({ title, icon, color, data, delta, worsening, unit, latestValue }) => {
+const INTERVENTION_ICONS: Record<InterventionType, string> = {
+  medication: '💊',
+  oxygen: '🫁',
+  iv: '💧',
+  nebulizer: '🌫',
+  antibiotic: '💉',
+  referral: '🚑',
+};
+
+const InterventionMarker: React.FC<any> = ({ cx, cy, payload }) => {
+  if (cx === undefined || cy === undefined || !payload) return null;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={14} fill="#140c16" opacity={0.95} />
+      <text x={cx} y={cy + 4} textAnchor="middle" fontSize={16} fill="#ffcad4" style={{ pointerEvents: 'none' }}>
+        {payload.icon}
+      </text>
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        values="0 -1;0 1;0 -1"
+        dur="2.5s"
+        repeatCount="indefinite"
+      />
+    </g>
+  );
+};
+
+const TrendChartTooltip: React.FC<any> = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null;
+
+  const event = payload.find((entry: any) => entry.payload?.eventName)?.payload;
+  const valueEntry = payload.find((entry: any) => entry.dataKey === 'value')?.payload;
+
+  if (event) {
+    return (
+      <div className="rounded-xl border border-[#382a33] bg-[#130f12] p-3 text-[12px] text-[#f1effa] shadow-xl">
+        <div className="font-semibold text-white mb-2">Medication Administered</div>
+        <div className="text-xs text-[#d7c8e3] mb-2">{event.eventName}</div>
+        <div className="text-[11px] text-[#c7b8e3]">
+          <div><strong>Medicine:</strong> {event.eventName}{event.dosage ? ` ${event.dosage}` : ''}</div>
+          <div><strong>Reason:</strong> {event.description}</div>
+          <div><strong>Given by:</strong> {event.givenBy}</div>
+          <div><strong>Time:</strong> {event.time}</div>
+          {event.expectedEffect && <div><strong>Expected Effect:</strong> {event.expectedEffect}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-[#382a33] bg-[#130f12] p-3 text-[12px] text-[#f1effa] shadow-xl">
+      <div className="font-semibold text-white mb-1">{label}</div>
+      {valueEntry && (
+        <div className="text-[11px] text-[#d7c8e3]">Value: {valueEntry.value}</div>
+      )}
+    </div>
+  );
+};
+
+const TrendChart: React.FC<TrendChartProps> = ({ title, icon, color, vitalKey, data, interventions, delta, worsening, unit, latestValue }) => {
+  const markerPoints = (interventions ?? [])
+    .filter((intervention) => intervention.affectedVitals.includes(vitalKey))
+    .map((intervention) => {
+      const matchingPoint = data.find((point) => point.label === intervention.time);
+      if (!matchingPoint) {
+        return null;
+      }
+      return {
+        ...matchingPoint,
+        icon: INTERVENTION_ICONS[intervention.type],
+        eventName: intervention.name,
+        description: intervention.reason,
+        dosage: intervention.dosage,
+        givenBy: intervention.givenBy,
+        expectedEffect: intervention.expectedEffect,
+        time: intervention.time,
+      };
+    })
+    .filter(Boolean) as Array<{
+      label: string;
+      value: number;
+      icon: string;
+      eventName: string;
+      description: string;
+      dosage?: string;
+      givenBy: string;
+      expectedEffect?: string;
+      time: string;
+    }>;
   const trendDir = delta >= 0 ? '↑' : '↓';
   const trendLabel = worsening ? 'Worsening' : 'Improving';
   
   return (
-    <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-4 rounded-2xl border border-[#eeedf7] dark:border-[#382a33]">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-start gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#b50063]/10 flex items-center justify-center text-[#b50063] dark:text-[#ffb0c9]">
+    <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-5 rounded-[28px] border border-[#eeedf7] dark:border-[#382a33] shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-2xl bg-[#b50063]/10 flex items-center justify-center text-[#b50063] dark:text-[#ffb0c9]">
             <span className="material-symbols-outlined text-base">{icon}</span>
           </div>
           <div>
-            <h3 className="text-xs font-bold text-white">{title} Trend</h3>
-            <p className="text-[10px] text-[#e3bdc7]">Time-series from latest 3 readings.</p>
+            <h3 className="text-sm font-bold text-white">{title} Trend</h3>
+            <p className="text-[11px] text-[#d7c8e3] mt-1">Time-series from latest 3 readings.</p>
           </div>
         </div>
-        <span className="rounded-full bg-[#ba1a1a]/20 px-2 py-1 text-[10px] font-bold text-[#ba1a1a] dark:text-[#ffdad6]">
+        <span className="rounded-full bg-[#b50063]/15 px-3 py-1 text-[10px] font-bold text-[#ffb0c9] border border-[#b50063]/20">
           {trendDir} {trendLabel}
         </span>
       </div>
       
-      <div className="h-24 mb-3">
+      <div className="h-36 mb-4">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+          <LineChart data={data} margin={{ top: 10, right: 10, bottom: 10, left: -8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#382a33" vertical={false} />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#e3bdc7' }} />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#d7c8e3' }} />
             <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-            <Tooltip contentStyle={{ backgroundColor: '#130f12', border: '1px solid #382a33', borderRadius: '8px', color: '#f1effa' }} />
+            <Tooltip content={<TrendChartTooltip />} />
             <Line
               type="monotone"
               dataKey="value"
               stroke={color}
-              strokeWidth={2.5}
-              dot={{ r: 2.5, fill: color }}
-              activeDot={{ r: 3.5 }}
-              animationDuration={500}
+              strokeWidth={3}
+              dot={{ r: 3, fill: color }}
+              activeDot={{ r: 4 }}
+              animationDuration={600}
             />
+            {markerPoints.length > 0 && (
+              <Scatter data={markerPoints} fill={color} shape={<InterventionMarker />} />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>
       
-      <div className="flex items-center justify-between text-[10px]">
-        <span className="text-[#e3bdc7]">Latest value</span>
+      <div className="flex items-center justify-between gap-3 text-[11px]">
+        <span className="text-[#d7c8e3]">Latest value</span>
         <span className="font-bold text-white">{latestValue}</span>
       </div>
       
-      <div className="rounded-full bg-[#ba1a1a]/20 px-2 py-1.5 text-[10px] font-bold text-[#ba1a1a] dark:text-[#ffdad6] w-fit mt-2">
+      <div className="rounded-full bg-[#b50063]/15 px-3 py-2 text-[12px] font-semibold text-[#ffb0c9] w-fit mt-4">
         {trendDir} {Math.abs(delta).toFixed(1)}{unit} since 10:00 AM
       </div>
     </div>
@@ -81,7 +176,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ title, icon, color, data, delta
 };
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(patients[0]?.id || '');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(patients[0]?.patientId || '');
   const [trendReadings, setTrendReadings] = useState<TrendReading[]>([]);
   const [prediction, setPrediction] = useState<TrendPrediction | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,19 +184,45 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
 
   useEffect(() => {
     if (!patients.length) return;
-    if (!patients.some((patient) => patient.id === selectedPatientId)) {
-      setSelectedPatientId(patients[0].id);
+    if (!patients.some((patient) => patient.patientId === selectedPatientId)) {
+      setSelectedPatientId(patients[0].patientId);
     }
   }, [patients, selectedPatientId]);
 
   const selectedPatient = useMemo(
-    () => patients.find((patient) => patient.id === selectedPatientId) || patients[0],
+    () => patients.find((patient) => patient.patientId === selectedPatientId) || patients[0],
     [patients, selectedPatientId]
   );
 
   const dataset = useMemo(() => {
-    return TREND_PATIENT_DATA.find((entry) => entry.patientId === selectedPatient?.id) || TREND_PATIENT_DATA[0];
+    return TREND_PATIENT_DATA.find((entry) => entry.patientId === selectedPatient?.patientId) || TREND_PATIENT_DATA[0];
   }, [selectedPatient]);
+
+  const interventionSummary = useMemo(() => {
+    const interventions = dataset.interventions || [];
+    if (!interventions.length || !trendReadings.length) {
+      return '';
+    }
+
+    const responseEvents = interventions.filter((intervention) =>
+      intervention.affectedVitals.some((vital) =>
+        ['temperature', 'spo2', 'pulse', 'respiration'].includes(vital)
+      )
+    );
+
+    const improved = trendReadings[trendReadings.length - 1].temperature < trendReadings[0].temperature;
+    const oxygenResponse = trendReadings[trendReadings.length - 1].spo2 > trendReadings[0].spo2;
+
+    if (responseEvents.length && (improved || oxygenResponse)) {
+      return `${responseEvents[0].name} given at ${responseEvents[0].time}. Patient responded to treatment.`;
+    }
+
+    if (responseEvents.length) {
+      return `${responseEvents[0].name} given at ${responseEvents[0].time}. Temperature increased despite medication. Possible persistent infection. Recommend physician review.`;
+    }
+
+    return '';
+  }, [dataset.interventions, trendReadings]);
 
   useEffect(() => {
     if (!selectedPatient) return;
@@ -111,9 +232,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
       setErrorMessage(null);
 
       try {
-        const readings = dataset?.readings || [];
-        setTrendReadings(readings);
-        const result = await predictTrend(readings);
+        const allReadings = dataset?.readings || [];
+        const recentReadings = allReadings.slice(-3);
+        setTrendReadings(allReadings);
+        const result = await predictTrend(recentReadings);
         setPrediction(result);
       } catch (error) {
         setPrediction(null);
@@ -178,12 +300,30 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
     return { signals, overall, clinicalCall, recommendation };
   }, [trendReadings, vitalsDelta]);
 
+  const parseTimeValue = (time: string) => {
+    const [clock, period] = time.split(' ');
+    const [hours, minutes] = clock.split(':').map(Number);
+    const normalizedHour = hours % 12 + (period === 'PM' ? 12 : 0);
+    return normalizedHour * 60 + minutes;
+  };
+
   const timeline = useMemo(() => {
-    return trendReadings.map((reading) => ({
+    const readingItems = trendReadings.map((reading) => ({
       time: reading.timestamp,
       label: 'Vitals recorded',
+      type: 'vitals' as const,
     }));
-  }, [trendReadings]);
+
+    const interventionItems = (dataset.interventions ?? []).map((intervention) => ({
+      time: intervention.time,
+      label: `${INTERVENTION_ICONS[intervention.type]} ${intervention.name} administered`,
+      type: 'intervention' as const,
+      reason: intervention.reason,
+      icon: INTERVENTION_ICONS[intervention.type],
+    }));
+
+    return [...readingItems, ...interventionItems].sort((a, b) => parseTimeValue(a.time) - parseTimeValue(b.time));
+  }, [trendReadings, dataset.interventions]);
 
   return (
     <div className="flex flex-col w-full gap-5 animate-fadeIn pb-6">
@@ -201,25 +341,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
         
         <div className="flex gap-2 overflow-x-auto pb-2">
           {patients.map((patient) => {
-            const isActive = patient.id === selectedPatient?.id;
+            const isActive = patient.patientId === selectedPatient?.patientId;
             return (
               <button
-                key={patient.id}
+                key={patient.patientId}
                 type="button"
-                onClick={() => setSelectedPatientId(patient.id)}
+                onClick={() => setSelectedPatientId(patient.patientId)}
                 className={`min-w-[140px] rounded-2xl border p-3 text-left transition-all ${
                   isActive
                     ? 'border-[#b50063] bg-[#221a1f] shadow-lg shadow-[#b50063]/20'
                     : 'border-[#382a33] bg-[#130f12]'
                 }`}
               >
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#e3bdc7]">{patient.id}</div>
-                <div className="text-sm font-bold text-white mt-1">{patient.name}</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#e3bdc7]">{patient.patientId}</div>
+                <div className="text-sm font-bold text-white mt-1">{patient.patientName}</div>
                 <div className="text-[10px] text-[#b50063] dark:text-[#ffb0c9] font-semibold mt-2">Risk {patient.newsScore}</div>
                 <div className="text-[10px] text-[#e3bdc7] mt-1">{patient.riskLevel}</div>
-                <button className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] mt-2 hover:underline">
+                <span className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] mt-2 inline-block hover:underline">
                   View →
-                </button>
+                </span>
               </button>
             );
           })}
@@ -231,7 +371,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#e3bdc7]">Patient</span>
-            <div className="text-2xl font-extrabold text-white mt-1">{selectedPatient?.name || 'N/A'}</div>
+            <div className="text-2xl font-extrabold text-white mt-1">{selectedPatient?.patientName || 'N/A'}</div>
           </div>
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#e3bdc7]">Age / Gender</span>
@@ -258,7 +398,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           title="Temperature"
           icon="thermometer"
           color="#b50063"
+          vitalKey="temperature"
           data={trendReadings.map((r) => ({ label: r.timestamp, value: r.temperature }))}
+          interventions={dataset.interventions}
           delta={vitalsDelta.temp}
           worsening={vitalsDelta.temp > 1}
           unit="°C"
@@ -268,7 +410,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           title="Pulse"
           icon="favorite"
           color="#b50063"
+          vitalKey="pulse"
           data={trendReadings.map((r) => ({ label: r.timestamp, value: r.pulse }))}
+          interventions={dataset.interventions}
           delta={vitalsDelta.pulse}
           worsening={vitalsDelta.pulse > 10}
           unit="bpm"
@@ -278,7 +422,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           title="SpO₂"
           icon="humidity_mid"
           color="#00bfa5"
+          vitalKey="spo2"
           data={trendReadings.map((r) => ({ label: r.timestamp, value: r.spo2 }))}
+          interventions={dataset.interventions}
           delta={vitalsDelta.spo2}
           worsening={vitalsDelta.spo2 < 0}
           unit="%"
@@ -288,7 +434,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           title="Respiration"
           icon="air"
           color="#ff9800"
+          vitalKey="respiration"
           data={trendReadings.map((r) => ({ label: r.timestamp, value: r.respiration }))}
+          interventions={dataset.interventions}
           delta={vitalsDelta.resp}
           worsening={vitalsDelta.resp > 0}
           unit="/min"
@@ -296,80 +444,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
         />
       </div>
 
-      {/* AI Clinical Summary */}
-      <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-4 rounded-2xl border border-[#eeedf7] dark:border-[#382a33]">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#b50063]/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-base text-[#b50063]">insights</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">AI Clinical Summary</h3>
-              <p className="text-[10px] text-[#e3bdc7]">
-                The model looks for meaningful changes in the vitals, not just the score.
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] font-bold bg-[#ba1a1a]/20 text-[#ffdad6] px-2 py-1 rounded-full">
-            {summary.overall}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {/* Observation Signals */}
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#e3bdc7]">Observation Signals</span>
-            <span className="text-[10px] text-[#e3bdc7] block">Latest vs 10:00 AM</span>
-            <div className="mt-3 space-y-2">
-              {summary.signals.map((signal) => (
-                <div key={signal.label} className="bg-[#130f12] p-2.5 rounded-xl border border-[#382a33]">
-                  <div className="text-xs font-bold text-white">{signal.label}</div>
-                  <div className="text-[10px] text-[#b50063] font-semibold mt-1 flex items-center gap-1">
-                    {signal.delta >= 0 ? '↑' : '↓'} WORSENING
-                  </div>
-                  <div className="text-[10px] text-[#ba1a1a] font-bold mt-1">
-                    {signal.delta >= 0 ? '↑' : '↓'} {Math.abs(signal.delta).toFixed(1)}{signal.unit}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Overall Trend */}
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#e3bdc7]">Overall Trend</span>
-            <span className="text-[10px] text-[#e3bdc7] block">Based on the direction of the last three readings.</span>
-            <div className="mt-3 space-y-3">
-              <div className="bg-[#130f12] p-3 rounded-xl border border-[#382a33]">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[#e3bdc7]">Overall Clinical Call</span>
-                <div className="text-xl font-extrabold text-white mt-2">{summary.overall}</div>
-              </div>
-              <div className="bg-[#130f12] p-3 rounded-xl border border-[#382a33]">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[#e3bdc7]">Clinical Assessment</span>
-                <div className="text-base font-extrabold text-[#ba1a1a] mt-2">{summary.clinicalCall}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recommendation */}
-        {summary.recommendation && (
-          <div className="mt-4 bg-[#ba1a1a]/10 border border-[#ba1a1a]/30 rounded-xl p-3">
-            <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-[#ba1a1a] text-lg mt-0.5 flex-shrink-0">warning</span>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#ffdad6]">Recommendation</span>
-                <p className="text-xs text-[#e3bdc7] mt-1">{summary.recommendation}</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* AI Prediction Card */}
       <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-4 rounded-2xl border border-[#eeedf7] dark:border-[#382a33]">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-white">AI Prediction Card</h3>
+          <h3 className="text-sm font-bold text-white">AI Prediction Summary</h3>
           {isLoading ? (
             <span className="text-[10px] font-bold text-[#b50063] animate-pulse">Connecting…</span>
           ) : errorMessage ? (
@@ -418,6 +496,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
             <div className="bg-[#130f12] p-3 rounded-xl border border-[#382a33]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#e3bdc7]">Confidence</span>
               <div className="text-2xl font-extrabold text-[#b50063] mt-1">{(prediction.confidence * 100).toFixed(1)}%</div>
+            </div>
+            <div className="col-span-2 text-[10px] text-[#d7c8e3] mt-2">
+              Confidence reflects the model's certainty based on the internal ensemble spread. Higher values mean a more stable prediction; lower values suggest less reliable trend confidence.
             </div>
           </div>
         ) : null}

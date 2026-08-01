@@ -23,7 +23,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
     setTimeout(() => {
       setIsTransmitting(false);
       setIsSent(true);
-      onSendReferral(patient.id);
+      onSendReferral(patient.patientId);
     }, 1800);
   };
 
@@ -68,7 +68,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
               <img
                 className="w-full h-full object-cover"
                 src={patient.photoUrl}
-                alt={patient.name}
+                alt={patient.patientName}
               />
             ) : (
               <span className="material-symbols-outlined text-3xl text-[#5b3f47]">person</span>
@@ -76,10 +76,10 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="text-xl font-bold text-[#1a1b22] dark:text-[#f1effa]">
-              {patient.name}
+              {patient.patientName}
             </span>
             <span className="text-sm text-[#5b3f47] dark:text-[#e3bdc7]">
-              Patient ID: {patient.id} {patient.age ? `• ${patient.age}y ${patient.gender}` : ''}
+              Patient ID: {patient.patientId} {patient.age ? `• ${patient.age}y ${patient.gender}` : ''}
             </span>
           </div>
         </div>
@@ -251,7 +251,7 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
                 location_on
               </span>
               <span className="text-xs font-bold text-[#1a1b22] dark:text-[#f1effa] truncate">
-                {patient.targetFacility} ({patient.facilityDistance})
+                {patient.phc} ({patient.facilityDistance})
               </span>
             </div>
             <span className="text-[10px] font-semibold text-[#b50063] dark:text-[#ffb0c9] bg-[#ffd9e3] dark:bg-[#4f1030] px-2 py-0.5 rounded-full">

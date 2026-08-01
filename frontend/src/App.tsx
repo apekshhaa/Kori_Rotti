@@ -79,13 +79,13 @@ export default function App() {
   };
 
   const handleSendReferral = async (patientId: string) => {
-    const targetPatient = patients.find((p) => p.id === patientId);
+    const targetPatient = patients.find((p) => p.patientId === patientId);
     if (targetPatient) {
       await createReferral(targetPatient, targetPatient.caregiverFlags || ['Breathing harder']);
     }
     setPatients((prev) =>
       prev.map((p) =>
-        p.id === patientId
+        p.patientId === patientId
           ? {
               ...p,
               referralSent: true,
@@ -99,9 +99,9 @@ export default function App() {
 
   const handleSaveNewPatient = (newPatient: Patient) => {
     setPatients((prev) => [newPatient, ...prev]);
-    setActivePatientId(newPatient.id);
+    setActivePatientId(newPatient.patientId);
     setActiveTab('assessments');
-    showToast(`Assessment created for ${newPatient.name} (Score ${newPatient.newsScore}/20)`);
+    showToast(`Assessment created for ${newPatient.patientName} (Score ${newPatient.newsScore}/20)`);
   };
 
   const handleStartAssessmentFromDashboard = () => {
