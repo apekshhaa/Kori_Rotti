@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { NormalizedReferral } from '../../services/referralApi';
 import { PreparationChecklist } from './PreparationChecklist';
 import { ReferralTimeline } from './ReferralTimeline';
@@ -16,14 +16,15 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
   onDelete,
   onClose,
 }) => {
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const getRiskBadgeColor = (level: string) => {
     switch (level) {
       case 'URGENT':
         return 'bg-red-500/10 text-red-600 dark:bg-red-950/60 dark:text-red-300 border-red-300 dark:border-red-800';
       case 'WATCH':
-        return 'bg-amber-500/10 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 dark:border-amber-800';
+        return 'bg-primary/10 text-[var(--color-primary)] dark:bg-[#2c2128] dark:text-[var(--color-on-primary)] border-slate-200 dark:border-[#382a33]';
       default:
-        return 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
+        return 'bg-primary/10 text-[var(--color-primary)] dark:bg-[#2c2128] dark:text-[var(--color-on-primary)] border-slate-200 dark:border-[#382a33]';
     }
   };
 
@@ -34,21 +35,21 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
           label: 'Acknowledge Referral',
           nextStatus: 'acknowledged' as const,
           icon: 'task_alt',
-          bgColor: 'bg-slate-900 hover:bg-slate-800 dark:bg-[#84cc16] dark:hover:bg-[#a3e635] text-white dark:text-[#1a1b22]',
+          bgColor: 'bg-slate-900 hover:bg-slate-800 text-white',
         };
       case 'acknowledged':
         return {
           label: 'Mark Patient Arrived',
           nextStatus: 'arrived' as const,
           icon: 'local_hospital',
-          bgColor: 'bg-[#84cc16] hover:bg-[#99e320] text-slate-950 font-extrabold',
+          bgColor: 'bg-primary hover:opacity-90 text-[var(--color-on-primary)] font-extrabold',
         };
       case 'arrived':
         return {
           label: 'Mark Checked In',
           nextStatus: 'checked_in' as const,
           icon: 'how_to_reg',
-          bgColor: 'bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold',
+          bgColor: 'bg-primary hover:opacity-90 text-white font-extrabold',
         };
       case 'checked_in':
         return {
@@ -68,6 +69,13 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
   };
 
   const buttonConfig = getStatusButtonConfig();
+  const countdownText = useMemo(() => {
+    if (!referral.acknowledgementDeadline) return 'Awaiting deadline';
+    const remaining = Math.max(0, Math.round((referral.acknowledgementDeadline - Date.now()) / 60000));
+    return remaining > 0 ? `${remaining} min remaining` : 'Deadline passed';
+  }, [referral.acknowledgementDeadline]);
+
+  const readinessPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6 bg-white dark:bg-[#1a1316] p-6 rounded-2xl border border-slate-200 dark:border-[#382a33] shadow-sm animate-fadeIn transition-all">
@@ -112,7 +120,7 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
               <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 block">
                 ETA
               </span>
-              <span className="text-lg font-black text-[#84cc16] dark:text-[#a3e635]">
+              <span className="text-lg font-black" style={{ color: 'var(--color-primary)' }}>
                 {referral.formattedEta}
               </span>
             </div>
@@ -208,7 +216,8 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
             {referral.caregiverFlags.map((flag, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}
               >
                 <span className="material-symbols-outlined text-sm">visibility</span>
                 <span>{flag}</span>
@@ -239,10 +248,43 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
         </div>
       </div>
 
+      {/* Coordination Panel */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-[#382a33] bg-slate-50 dark:bg-[#221a1f] p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">AI Coordinator</h3>
+          <span className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>LIVE</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-white dark:bg-[#1a1316] p-3 border border-slate-200 dark:border-[#382a33]">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Countdown</p>
+            <p className="text-lg font-black text-slate-900 dark:text-[#f1effa]">{countdownText}</p>
+          </div>
+          <div className="rounded-xl bg-white dark:bg-[#1a1316] p-3 border border-slate-200 dark:border-[#382a33]">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Checklist Ready</p>
+            <p className="text-lg font-black text-slate-900 dark:text-[#f1effa]">{readinessPercent}%</p>
+          </div>
+        </div>
+        {referral.aiDecision && (
+          <div className="rounded-xl border border-slate-200 dark:border-[#382a33] bg-white dark:bg-[#1a1316] p-3">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">AI Decision</p>
+            <p className="text-sm font-black text-slate-900 dark:text-[#f1effa] uppercase">{referral.aiDecision}</p>
+            {referral.aiReason && <p className="mt-1 text-sm text-slate-600 dark:text-[#e3bdc7]">{referral.aiReason}</p>}
+            {referral.aiExplanation.length > 0 && (
+              <ul className="mt-2 list-disc pl-4 text-xs text-slate-600 dark:text-[#e3bdc7] space-y-1">
+                {referral.aiExplanation.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Preparation Checklist */}
       <PreparationChecklist
         referralId={referral.id}
         recommendedActions={referral.recommendedActions}
+        checklistItems={referral.checklistItems}
+        completedChecklist={referral.completedChecklist}
+        onProgressChange={setProgress}
       />
 
       {/* Status Action Button */}
@@ -267,7 +309,7 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
       )}
 
       {!buttonConfig.nextStatus && (
-        <div className="w-full py-3 px-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-[#382a33] text-emerald-900 dark:text-emerald-200 text-center text-xs font-bold flex items-center justify-center gap-2">
+        <div className="w-full py-3 px-4 rounded-2xl text-center text-xs font-bold flex items-center justify-center gap-2" style={{ backgroundColor: 'rgba(0,0,0,0.04)', color: 'var(--color-primary)' }}>
           <span className="material-symbols-outlined text-base">verified</span>
           <span>Patient Checked In & Admitted</span>
         </div>

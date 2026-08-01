@@ -19,9 +19,9 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
       case 'URGENT':
         return 'bg-red-500';
       case 'WATCH':
-        return 'bg-amber-500';
+        return 'bg-primary';
       default:
-        return 'bg-emerald-500';
+        return 'bg-primary';
     }
   };
 
@@ -30,9 +30,9 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
       case 'URGENT':
         return 'bg-red-100 text-red-800 dark:bg-red-950/70 dark:text-red-200 border-red-200 dark:border-red-800';
       case 'WATCH':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200 border-amber-200 dark:border-amber-800';
+        return 'bg-white/60 text-[var(--color-primary)] dark:bg-[#2c2128] dark:text-[var(--color-on-primary)] border border-slate-200 dark:border-[#382a33]';
       default:
-        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800';
+        return 'bg-white/60 text-[var(--color-primary)] dark:bg-[#2c2128] dark:text-[var(--color-on-primary)] border border-slate-200 dark:border-[#382a33]';
     }
   };
 
@@ -45,7 +45,7 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
       case 'checked_in':
         return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700';
       default:
-        return 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+        return 'bg-white dark:bg-[#1a1316] text-[var(--color-on-surface)] border-slate-200 dark:border-[#382a33]';
     }
   };
 
@@ -53,8 +53,8 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
     <div
       onClick={() => onSelect(referral)}
       className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer ${
-        isSelected
-          ? 'bg-slate-50 dark:bg-[#2c2128] border-slate-900 dark:border-[#84cc16] shadow-md'
+          isSelected
+            ? 'bg-slate-50 dark:bg-[#2c2128] border-slate-900 shadow-md'
           : 'bg-white dark:bg-[#1a1316] border-slate-200/90 dark:border-[#382a33] hover:border-slate-300 dark:hover:border-[#44333e] hover:shadow-xs'
       } ${isNewUrgent ? 'animate-pulse ring-2 ring-red-400 dark:ring-red-500/50' : ''}`}
     >
@@ -91,8 +91,8 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
               {referral.status.replace('_', ' ')}
             </span>
 
-            <div className="flex items-center gap-1 text-xs font-black text-slate-900 dark:text-[#f1effa] bg-slate-100 dark:bg-[#221a1f] px-2 py-0.5 rounded-md">
-              <span className="material-symbols-outlined text-xs text-[#84cc16]">schedule</span>
+              <div className="flex items-center gap-1 text-xs font-black text-slate-900 dark:text-[#f1effa] bg-slate-100 dark:bg-[#221a1f] px-2 py-0.5 rounded-md">
+              <span className="material-symbols-outlined text-xs" style={{ color: 'var(--color-primary)' }}>schedule</span>
               <span>{referral.formattedEta}</span>
             </div>
           </div>
@@ -157,7 +157,7 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
             </span>
           </div>
 
-          <button className="text-xs font-extrabold text-[#84cc16] dark:text-[#a3e635] flex items-center gap-0.5 hover:underline flex-shrink-0">
+          <button className="text-xs font-extrabold flex items-center gap-0.5 hover:underline flex-shrink-0" style={{ color: 'var(--color-primary)' }}>
             <span>View</span>
             <span className="material-symbols-outlined text-sm">chevron_right</span>
           </button>
@@ -165,7 +165,7 @@ export const ReferralQueueItem: React.FC<ReferralQueueItemProps> = ({
 
         {/* Caregiver Flag if present */}
         {referral.caregiverFlags.length > 0 && (
-          <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-md border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1.5 w-fit">
+          <div className="text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1.5 w-fit" style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
             <span className="material-symbols-outlined text-xs">visibility</span>
             <span>{referral.caregiverFlags.join(', ')}</span>
           </div>

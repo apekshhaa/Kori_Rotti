@@ -3,6 +3,7 @@ require("dotenv").config();
 
 // Import the Express app
 const app = require("./src/app");
+const { startCoordinatorMonitoring } = require("./src/services/hospitalCoordinator");
 
 // Get port from .env
 const PORT = process.env.PORT || 5000;
@@ -10,4 +11,7 @@ const PORT = process.env.PORT || 5000;
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
+    startCoordinatorMonitoring().catch((error) => {
+        console.warn("Coordinator monitoring failed to start", error.message);
+    });
 });

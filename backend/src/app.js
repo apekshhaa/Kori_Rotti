@@ -4,6 +4,8 @@ const cors = require("cors");
 const aiRoutes = require("./routes/ai");
 const healthRoutes = require("./routes/health");
 const referralRoutes = require("./routes/referrals");
+const coordinatorRoutes = require("./routes/hospitalCoordinator");
+const hospitalsRoutes = require("./routes/hospitals");
 //both for testing and hospital creation
 const testRoutes = require("./routes/test");
 const hospitalTestRoutes = require("./routes/hospitalTest");
@@ -25,6 +27,8 @@ app.get("/", (req, res) => {
 app.use("/api/ai", aiRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/referrals", referralRoutes);
+app.use("/api/coordinator", coordinatorRoutes);
+app.use("/api/hospitals", hospitalsRoutes);
 //testing and hospital creation routes
 app.use("/api/test", testRoutes);
 app.use("/api/hospital-test", hospitalTestRoutes);

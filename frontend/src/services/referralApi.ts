@@ -45,6 +45,15 @@ export interface BackendReferral {
   referralStatus?: string;
   eta?: number; // minutes
   recommendedActions?: string[];
+  checklistItems?: string[];
+  completedChecklist?: string[];
+  acknowledgementDeadline?: number | string;
+  aiDecision?: string;
+  aiReason?: string;
+  aiConfidence?: number;
+  aiExplanation?: string[];
+  aiRecommendedHospitalId?: string;
+  aiRecommendedHospitalName?: string;
   historyScores?: { time: string; score: number }[];
 }
 
@@ -75,6 +84,15 @@ export interface NormalizedReferral {
   eta: number | null; // minutes
   formattedEta: string;
   recommendedActions: string[];
+  checklistItems: string[];
+  completedChecklist: string[];
+  acknowledgementDeadline: number | null;
+  aiDecision: string | null;
+  aiReason: string | null;
+  aiConfidence: number | null;
+  aiExplanation: string[];
+  aiRecommendedHospitalId: string | null;
+  aiRecommendedHospitalName: string | null;
   trend?: { time: string; score: number; pulse?: number; spo2?: number; respiration?: number }[];
   timeline: { time: string; label: string }[];
 }
@@ -169,6 +187,17 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
         'Review referral information',
       ];
 
+  const checklistItems = Array.isArray(raw.checklistItems) && raw.checklistItems.length > 0
+    ? raw.checklistItems
+    : recommendedActions;
+
+  const completedChecklist = Array.isArray(raw.completedChecklist) ? raw.completedChecklist : [];
+  const acknowledgementDeadline = typeof raw.acknowledgementDeadline === 'number'
+    ? raw.acknowledgementDeadline
+    : typeof raw.acknowledgementDeadline === 'string'
+      ? Date.parse(raw.acknowledgementDeadline)
+      : Date.now() + 10 * 60 * 1000;
+
   const timeline = [
     { time: '09:41', label: 'Risk threshold crossed' },
     { time: '09:42', label: 'Referral sent' },
@@ -206,6 +235,15 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
     eta,
     formattedEta,
     recommendedActions,
+    checklistItems,
+    completedChecklist,
+    acknowledgementDeadline,
+    aiDecision: raw.aiDecision || null,
+    aiReason: raw.aiReason || null,
+    aiConfidence: raw.aiConfidence ?? null,
+    aiExplanation: raw.aiExplanation || [],
+    aiRecommendedHospitalId: raw.aiRecommendedHospitalId || null,
+    aiRecommendedHospitalName: raw.aiRecommendedHospitalName || null,
     timeline,
   };
 }
@@ -366,6 +404,25 @@ export async function updateReferralStatus(
   }
 
   return { success: true, isMock: true };
+}
+
+/**
+ * Update completed checklist on the backend
+ */
+export async function updateReferralChecklistApi(referralId: string, completedChecklist: string[]): Promise<{ success: boolean; isMock: boolean }> {
+  try {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}/checklist`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completedChecklist }),
+    });
+
+    if (res.ok) return { success: true, isMock: false };
+    return { success: false, isMock: false };
+  } catch (err) {
+    return { success: true, isMock: true };
+  }
 }
 
 export async function deleteReferral(

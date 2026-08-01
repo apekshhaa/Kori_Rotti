@@ -165,8 +165,8 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed top-20 right-6 z-50 bg-slate-900 dark:bg-[#f1effa] text-white dark:text-slate-900 text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-white/20 animate-bounce max-w-md">
-            <span className="material-symbols-outlined text-lg text-[#84cc16]">
+            <div className="fixed top-20 right-6 z-50 bg-slate-900 dark:bg-[#f1effa] text-white dark:text-slate-900 text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-white/20 animate-bounce max-w-md">
+            <span className="material-symbols-outlined text-lg" style={{ color: 'var(--color-primary)' }}>
               notifications_active
             </span>
             <span>{toastMessage}</span>
@@ -176,11 +176,11 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
         {/* Hero Banner */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
               <h1 className="text-3xl font-black text-slate-900 dark:text-[#f1effa] tracking-tight">
                 Incoming referrals
               </h1>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#84cc16] animate-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-primary)' }} />
             </div>
             <p className="text-sm font-medium text-slate-500 dark:text-[#e3bdc7] mt-1">
               Advance notice from referring PHCs before patient arrival.
@@ -238,9 +238,9 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
             <p className="text-sm font-medium text-slate-500 dark:text-[#e3bdc7] max-w-md">
               New referrals from connected PHCs will appear here in real-time.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 mt-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Listening for referrals</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-[#2c2128] text-xs font-semibold border border-slate-200 dark:border-[#382a33] mt-2">
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-primary)' }} />
+              <span style={{ color: 'var(--color-primary)' }}>Listening for referrals</span>
             </div>
           </div>
         )}

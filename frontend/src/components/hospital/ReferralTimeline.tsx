@@ -31,11 +31,8 @@ export const ReferralTimeline: React.FC<ReferralTimelineProps> = ({ timeline }) 
             <div key={index} className="relative flex items-baseline justify-between gap-4">
               {/* Dot */}
               <div
-                className={`absolute -left-[18.5px] top-1 w-2.5 h-2.5 rounded-full border-2 ${
-                  isLast
-                    ? 'bg-[#84cc16] border-[#84cc16] ring-4 ring-[#84cc16]/20'
-                    : 'bg-slate-400 dark:bg-slate-500 border-slate-50 dark:border-[#221a1f]'
-                }`}
+                className="absolute -left-[18.5px] top-1 w-2.5 h-2.5 rounded-full border-2"
+                style={isLast ? { backgroundColor: 'var(--color-primary)', borderColor: 'var(--color-primary)', boxShadow: '0 0 0 8px rgba(181,0,99,0.12)' } : undefined}
               />
               <span className="text-xs font-semibold text-slate-800 dark:text-[#f1effa]">
                 {item.label}

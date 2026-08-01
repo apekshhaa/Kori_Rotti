@@ -33,7 +33,7 @@ export const HospitalHeader: React.FC<HospitalHeaderProps> = ({
         {/* Left branding */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#84cc16] text-[#1a1b22] flex items-center justify-center font-black text-lg shadow-sm">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg shadow-sm" style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
               S
             </div>
             <div className="flex flex-col">
@@ -41,7 +41,7 @@ export const HospitalHeader: React.FC<HospitalHeaderProps> = ({
                 <span className="font-extrabold text-xl text-slate-900 dark:text-[#f1effa] tracking-tight">
                   SETU
                 </span>
-                <span className="text-[10px] uppercase font-extrabold tracking-wider bg-[#84cc16]/20 text-[#4d7c0f] dark:bg-[#84cc16]/30 dark:text-[#a3e635] px-2 py-0.5 rounded-full">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-on-primary)' }}>
                   Receiving Hospital
                 </span>
               </div>
@@ -55,14 +55,14 @@ export const HospitalHeader: React.FC<HospitalHeaderProps> = ({
         {/* Right controls */}
         <div className="flex items-center gap-4">
           {/* Live Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Receiving referrals</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/60 dark:bg-[#2c2128] border border-slate-200 dark:border-[#382a33] text-xs font-semibold" >
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-primary)' }} />
+            <span style={{ color: 'var(--color-primary)' }}>Receiving referrals</span>
           </div>
 
           {/* Demo Data Indicator if applicable */}
           {isMock && (
-            <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--color-primary)' }}>
               Demo data
             </span>
           )}

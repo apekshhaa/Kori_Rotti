@@ -63,3 +63,31 @@ module.exports = {
     createDemoHospital
 
 };
+
+// Fetch hospital by ID (from Firestore)
+const getHospitalById = async (hospitalId) => {
+    try {
+        const doc = await db.collection('hospitals').doc(hospitalId).get();
+        if (!doc.exists) return null;
+        return { id: doc.id, ...doc.data() };
+    } catch (error) {
+        return null;
+    }
+};
+
+const listHospitals = async () => {
+    try {
+        const snap = await db.collection('hospitals').get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+        return [];
+    }
+};
+
+module.exports = {
+
+    createDemoHospital,
+    getHospitalById,
+    listHospitals
+
+};
