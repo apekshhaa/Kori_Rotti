@@ -123,7 +123,8 @@ const {
     updateReferralStatus,
     getReferralById,
     getIncomingReferrals,
-    updateReferralLifecycleStatus
+    updateReferralLifecycleStatus,
+    deleteReferralById
 } = require("../services/firebaseService");
 
 const {
@@ -362,9 +363,9 @@ const updateReferralLifecycle = async (req, res) => {
         }
 
 
-        // Current status
+        // Current status may be stored as referralStatus or legacy status
         const currentStatus =
-            referral.referralStatus;
+            referral.referralStatus || referral.status || "sent";
 
 
         // Allowed transitions
@@ -435,10 +436,37 @@ const updateReferralLifecycle = async (req, res) => {
 
 };
 
+const deleteReferral = async (req, res) => {
+    try {
+        const referralId = req.params.id;
+        const referral = await getReferralById(referralId);
+
+        if (!referral) {
+            return res.status(404).json({
+                success: false,
+                message: "Referral not found"
+            });
+        }
+
+        await deleteReferralById(referralId);
+
+        return res.status(200).json({
+            success: true,
+            referralId
+        });
+    } catch (error) {
+        console.error("Error deleting referral:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete referral"
+        });
+    }
+};
 
 module.exports = {
     createReferral,
     getReferral,
     getIncoming,
-    updateReferralLifecycle
+    updateReferralLifecycle,
+    deleteReferral
 };

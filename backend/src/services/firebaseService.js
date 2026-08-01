@@ -27,10 +27,11 @@ const db = require("../config/firebase");
 // };
 
 const saveReferral = async (referralData) => {
+    const { id, ...payload } = referralData;
 
     const docRef = await db.collection("referrals").add({
 
-        ...referralData,
+        ...payload,
 
         // Existing fields
         createdAt: new Date(),
@@ -93,12 +94,12 @@ const getReferralById = async (referralId) => {
         return null;
     }
 
+    const data = doc.data();
+    const { id: legacyId, ...rest } = data || {};
+
     return {
-
         id: doc.id,
-
-        ...doc.data()
-
+        ...rest,
     };
 
 };
@@ -108,14 +109,22 @@ const getIncomingReferrals = async () => {
     const snapshot = await db
         .collection("referrals")
         .where("hospitalId", "==", "dist-hospital-1")
-        .where("referralStatus", "==", "sent")
-        .orderBy("timestamp", "desc")
         .get();
 
-    const referrals = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    }));
+    const referrals = snapshot.docs
+        .map(doc => {
+            const data = doc.data();
+            const { id, ...payload } = data;
+            return {
+                id: doc.id,
+                ...payload,
+            };
+        })
+        .filter(referral => {
+            const status = referral.referralStatus || referral.status;
+            return ["sent", "acknowledged", "arrived", "checked_in"].includes(status);
+        })
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     return referrals;
 };
@@ -133,10 +142,18 @@ const updateReferralLifecycleStatus = async (referralId, status) => {
 
 };
 
+const deleteReferralById = async (referralId) => {
+    await db
+        .collection("referrals")
+        .doc(referralId)
+        .delete();
+};
+
 module.exports = {
     saveReferral,
     updateReferralStatus,
     getReferralById,
     getIncomingReferrals,
-    updateReferralLifecycleStatus
+    updateReferralLifecycleStatus,
+    deleteReferralById
 };

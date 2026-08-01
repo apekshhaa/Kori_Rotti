@@ -27,7 +27,8 @@ const {
     createReferral,
     getReferral,
     getIncoming,
-    updateReferralLifecycle
+    updateReferralLifecycle,
+    deleteReferral
 } = require("../controllers/referralController");
 
 const validateReferral = require("../middleware/validateReferral");
@@ -54,6 +55,11 @@ router.patch(
     updateReferralLifecycle
 );
 
+// DELETE /api/referrals/:id
+router.delete(
+    "/:id",
+    deleteReferral
+);
 
 // GET /api/referrals/:id
 router.get(

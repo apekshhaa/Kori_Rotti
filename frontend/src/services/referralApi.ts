@@ -42,6 +42,7 @@ export interface BackendReferral {
   caregiverObservations?: string[];
   hospitalId?: string;
   status?: string; // 'sent' | 'acknowledged' | 'arrived' | 'checked_in'
+  referralStatus?: string;
   eta?: number; // minutes
   recommendedActions?: string[];
   historyScores?: { time: string; score: number }[];
@@ -141,7 +142,7 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
   }
 
   const hospitalId = raw.hospitalId || 'dist-hospital-1';
-  const status = (raw.status || 'sent').toLowerCase() as 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
+  const status = (raw.referralStatus || raw.status || 'sent').toLowerCase() as 'sent' | 'acknowledged' | 'arrived' | 'checked_in';
 
   // ETA formatting
   const eta = raw.eta !== undefined && raw.eta !== null ? Number(raw.eta) : 75;
@@ -312,21 +313,26 @@ export async function fetchIncomingReferrals(): Promise<{
       headers: { Accept: 'application/json' },
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const rawList: BackendReferral[] = Array.isArray(data) ? data : data.referrals || [];
-      const normalized = rawList.map(normalizeReferral);
-      return { referrals: normalized, isMock: false };
+    if (!res.ok) {
+      const errorText = await res.text();
+      return {
+        referrals: [],
+        isMock: false,
+        error: `Referral API error ${res.status}: ${errorText}`,
+      };
     }
-  } catch (err) {
-    // API unavailable - fall back to mock data
-  }
 
-  // Fallback
-  return {
-    referrals: inMemoryReferrals.map(normalizeReferral),
-    isMock: true,
-  };
+    const data = await res.json();
+    const rawList: BackendReferral[] = Array.isArray(data) ? data : data.referrals || [];
+    const normalized = rawList.map(normalizeReferral);
+    return { referrals: normalized, isMock: false };
+  } catch (err) {
+    return {
+      referrals: [],
+      isMock: false,
+      error: 'Unable to connect to referral API.',
+    };
+  }
 }
 
 export async function updateReferralStatus(
@@ -341,7 +347,8 @@ export async function updateReferralStatus(
   );
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/referrals/${referralId}`, {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -350,6 +357,37 @@ export async function updateReferralStatus(
     if (res.ok) {
       return { success: true, isMock: false };
     }
+
+    const errorText = await res.text();
+    console.error('Referral status update failed:', res.status, errorText);
+    return { success: false, isMock: false };
+  } catch (err) {
+    // API unavailable - fallback worked locally
+  }
+
+  return { success: true, isMock: true };
+}
+
+export async function deleteReferral(
+  referralId: string
+): Promise<{ success: boolean; isMock: boolean }> {
+  inMemoryReferrals = inMemoryReferrals.filter(
+    (r) => r.id !== referralId && r.referralId !== referralId && r.patientId !== referralId
+  );
+
+  try {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}`, {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Referral delete failed:', res.status, errorText);
+      return { success: false, isMock: false };
+    }
+
+    return { success: true, isMock: false };
   } catch (err) {
     // API unavailable - fallback worked locally
   }

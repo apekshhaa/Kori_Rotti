@@ -6,12 +6,14 @@ import { ReferralTimeline } from './ReferralTimeline';
 interface ReferralDetailProps {
   referral: NormalizedReferral;
   onStatusUpdate: (referralId: string, newStatus: 'acknowledged' | 'arrived' | 'checked_in') => void;
+  onDelete?: (referralId: string) => void;
   onClose?: () => void;
 }
 
 export const ReferralDetail: React.FC<ReferralDetailProps> = ({
   referral,
   onStatusUpdate,
+  onDelete,
   onClose,
 }) => {
   const getRiskBadgeColor = (level: string) => {
@@ -254,8 +256,18 @@ export const ReferralDetail: React.FC<ReferralDetailProps> = ({
         </button>
       )}
 
+      {referral.status === 'acknowledged' && onDelete && (
+        <button
+          onClick={() => onDelete(referral.id)}
+          className="w-full mt-3 py-3.5 px-5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md transition-all active:scale-[0.99]"
+        >
+          <span className="material-symbols-outlined text-lg">delete</span>
+          <span>Delete Patient Record</span>
+        </button>
+      )}
+
       {!buttonConfig.nextStatus && (
-        <div className="w-full py-3 px-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-center text-xs font-bold flex items-center justify-center gap-2">
+        <div className="w-full py-3 px-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-[#382a33] text-emerald-900 dark:text-emerald-200 text-center text-xs font-bold flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-base">verified</span>
           <span>Patient Checked In & Admitted</span>
         </div>

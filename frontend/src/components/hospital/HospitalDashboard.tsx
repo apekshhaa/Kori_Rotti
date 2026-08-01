@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   fetchIncomingReferrals,
   updateReferralStatus,
+  deleteReferral,
   NormalizedReferral,
 } from '../../services/referralApi';
 import { HospitalHeader } from './HospitalHeader';
@@ -108,11 +109,18 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
     newStatus: 'acknowledged' | 'arrived' | 'checked_in'
   ) => {
     // Optimistic UI update
+    const previousReferrals = referrals;
     setReferrals((prev) =>
       prev.map((r) => (r.id === referralId ? { ...r, status: newStatus } : r))
     );
 
-    await updateReferralStatus(referralId, newStatus);
+    const result = await updateReferralStatus(referralId, newStatus);
+    if (!result.success && !result.isMock) {
+      setReferrals(previousReferrals);
+      setToastMessage('Unable to update referral status. Please try again.');
+      return;
+    }
+
     showToast(
       newStatus === 'acknowledged'
         ? 'Referral acknowledged by Receiving Hospital team.'
@@ -120,6 +128,24 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
         ? 'Patient marked as Arrived.'
         : 'Patient successfully Checked In.'
     );
+  };
+
+  const handleDeleteReferral = async (referralId: string) => {
+    const previousReferrals = referrals;
+    setReferrals((prev) => prev.filter((r) => r.id !== referralId));
+
+    const result = await deleteReferral(referralId);
+    if (!result.success && !result.isMock) {
+      setReferrals(previousReferrals);
+      setToastMessage('Unable to delete referral. Please try again.');
+      return;
+    }
+
+    if (selectedReferralId === referralId) {
+      setSelectedReferralId(null);
+    }
+
+    showToast('Referral and patient record deleted successfully.');
   };
 
   const selectedReferral = referrals.find((r) => r.id === selectedReferralId) || referrals[0];
@@ -250,6 +276,7 @@ export const HospitalDashboard: React.FC<HospitalDashboardProps> = ({
                 <ReferralDetail
                   referral={selectedReferral}
                   onStatusUpdate={handleStatusUpdate}
+                  onDelete={handleDeleteReferral}
                   onClose={() => setSelectedReferralId(null)}
                 />
               ) : (
