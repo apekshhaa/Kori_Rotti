@@ -453,3 +453,156 @@ export async function createReferral(patient: Patient, caregiverFlags: string[] 
 
   return { success: true, isMock: true, data: normalizeReferral(newRaw) };
 }
+
+// Hospital data interfaces
+export interface HospitalInfo {
+  id: string;
+  name: string;
+  phone: string;
+  address?: string;
+  totalBeds?: number;
+  availableBeds?: number;
+  specialties?: string[];
+}
+
+export interface ReferralRerouteResponse {
+  success: boolean;
+  newHospitalId?: string;
+  newHospital?: HospitalInfo;
+  rerouteCount?: number;
+  message?: string;
+}
+
+// Mock hospital data
+const MOCK_HOSPITALS: Record<string, HospitalInfo> = {
+  'dist-hospital-1': {
+    id: 'dist-hospital-1',
+    name: 'District Hospital A',
+    phone: '+91-9876543210',
+    address: '123 Medical Plaza, City Center',
+    totalBeds: 150,
+    availableBeds: 12,
+    specialties: ['Emergency', 'Cardiology', 'Pulmonology'],
+  },
+  'dist-hospital-2': {
+    id: 'dist-hospital-2',
+    name: 'City Medical Center',
+    phone: '+91-9876543211',
+    address: '456 Health Street, Downtown',
+    totalBeds: 200,
+    availableBeds: 8,
+    specialties: ['Emergency', 'ICU', 'Trauma'],
+  },
+  'dist-hospital-3': {
+    id: 'dist-hospital-3',
+    name: 'Regional Health Complex',
+    phone: '+91-9876543212',
+    address: '789 Wellness Road, North Wing',
+    totalBeds: 180,
+    availableBeds: 15,
+    specialties: ['General', 'Pediatrics', 'Gynecology'],
+  },
+};
+
+/**
+ * Fetch hospital details by hospital ID
+ */
+export async function fetchHospitalDetails(
+  hospitalId: string
+): Promise<{ hospital: HospitalInfo | null; error?: string }> {
+  try {
+    const encodedId = encodeURIComponent(hospitalId);
+    const res = await fetch(`${API_BASE_URL}/api/hospitals/${encodedId}`, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { hospital: data };
+    }
+
+    // Fallback to mock data
+    const mockHospital = MOCK_HOSPITALS[hospitalId];
+    if (mockHospital) {
+      return { hospital: mockHospital };
+    }
+
+    return { hospital: null, error: `Hospital ${hospitalId} not found` };
+  } catch (err) {
+    // Fallback to mock
+    const mockHospital = MOCK_HOSPITALS[hospitalId];
+    return { hospital: mockHospital || null };
+  }
+}
+
+/**
+ * Manually reroute a referral to another hospital
+ */
+export async function manualReroute(
+  referralId: string
+): Promise<ReferralRerouteResponse> {
+  try {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}/manual-reroute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        newHospitalId: data.newHospitalId,
+        newHospital: data.newHospital,
+        rerouteCount: data.rerouteCount,
+        message: data.message || 'Rerouting initiated. New hospital will receive alert.',
+      };
+    }
+
+    const errorText = await res.text();
+    return {
+      success: false,
+      message: `Reroute failed: ${res.status} ${errorText}`,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: 'Unable to connect to reroute service',
+    };
+  }
+}
+
+/**
+ * Fetch referral status and hospital info
+ */
+export async function fetchReferralStatus(
+  referralId: string
+): Promise<{
+  referral: NormalizedReferral | null;
+  hospital: HospitalInfo | null;
+  rerouteCount?: number;
+  error?: string;
+}> {
+  try {
+    const encodedId = encodeURIComponent(referralId);
+    const res = await fetch(`${API_BASE_URL}/api/referrals/${encodedId}/status`, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const normalizedReferral = normalizeReferral(data);
+      const hospitalDetails = await fetchHospitalDetails(normalizedReferral.hospitalId);
+      return {
+        referral: normalizedReferral,
+        hospital: hospitalDetails.hospital,
+        rerouteCount: data.rerouteCount,
+      };
+    }
+
+    return { referral: null, hospital: null, error: `Referral ${referralId} not found` };
+  } catch (err) {
+    return { referral: null, hospital: null, error: 'Failed to fetch referral status' };
+  }
+}
