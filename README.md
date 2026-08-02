@@ -1,6 +1,6 @@
-# Kori_Rotti
+# Setu
 
-Kori_Rotti is a full-stack hospital referral and care coordination platform built to support rapid patient handoff from primary care facilities to receiving hospitals. The system combines a React-based front end for assessment and referral workflows with a Node.js/Express backend for referral processing, hospital coordination, and AI-assisted insights.
+Setu is a full-stack hospital referral and care coordination platform built to support rapid patient handoff from primary care facilities to receiving hospitals. The system combines a React-based front end for assessment and referral workflows with a Node.js/Express backend for referral processing, hospital coordination, and AI-assisted insights.
 
 The project is designed for scenarios where frontline health workers need to:
 - capture patient assessments and risk signals,
@@ -12,7 +12,7 @@ The project is designed for scenarios where frontline health workers need to:
 
 ## Overview
 
-Kori_Rotti brings together three core experiences:
+Setu brings together three core experiences:
 
 1. Primary Health Center (PHC) workflow
    - create patient assessments,
@@ -283,4 +283,4 @@ The package metadata lists the project license as ISC.
 
 ## Summary
 
-Kori_Rotti is a practical digital referral and hospital coordination system for emergency and near-emergency care. It combines a modern UI with backend services for referrals, hospital readiness, caregiver communication, and AI-supported insights so that patient transfers can be handled more quickly and safely.
+Setu is a practical digital referral and hospital coordination system for emergency and near-emergency care. It combines a modern UI with backend services for referrals, hospital readiness, caregiver communication, and AI-supported insights so that patient transfers can be handled more quickly and safely.
