@@ -11,9 +11,11 @@ import { HospitalDashboard } from './components/hospital/HospitalDashboard';
 import { CaregiverObservationPage } from './components/CaregiverObservationPage';
 import { createReferral, deleteReferral } from './services/referralApi';
 import { useTranslation, languageOptions, LanguageCode } from './i18n.tsx';
+import { AuthPage } from './components/AuthPage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const { t, setLanguage, language } = useTranslation();
 
@@ -180,6 +182,11 @@ export default function App() {
   if (currentPath.startsWith('/caregiver/')) {
     const token = currentPath.split('/caregiver/')[1] || '';
     return <CaregiverObservationPage key={token || 'caregiver'} patientToken={token} />;
+  }
+
+  // Authentication gate for main application dashboards
+  if (!isAuthenticated) {
+    return <AuthPage onLogin={() => setIsAuthenticated(true)} />;
   }
 
   // Render Receiving Hospital Dashboard at /hospital route
