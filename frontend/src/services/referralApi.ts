@@ -193,6 +193,36 @@ function buildTimeline(raw: BackendReferral, status: 'sent' | 'acknowledged' | '
   return timeline;
 }
 
+function generateDynamicChecklistFrontend(raw: any): string[] {
+  const diagnosis = (raw.diagnosis || '').toLowerCase();
+  const caregiverFlags = Array.isArray(raw.caregiverFlags) ? raw.caregiverFlags.join(' ').toLowerCase() : '';
+  const needs = Array.isArray(raw.patientNeeds) ? raw.patientNeeds.join(' ').toLowerCase() : '';
+  const searchStr = `${diagnosis} ${caregiverFlags} ${needs}`;
+  const riskScore = raw.riskScore ?? raw.risk?.score ?? raw.newsScore ?? 0;
+  const temp = raw.vitals?.temperature ?? raw.vitals?.temp ?? 37;
+  const spo2 = raw.vitals?.spo2 ?? raw.vitals?.spO2 ?? 98;
+
+  if (searchStr.includes('chest') || searchStr.includes('cardiac') || searchStr.includes('heart') || searchStr.includes('ecg') || searchStr.includes('cardiolog')) {
+    return ['Cardiac Monitor Ready', 'ECG Machine Ready', 'Defibrillator Ready', 'Cardiologist Alerted', 'IV Access Secured'];
+  }
+  if (searchStr.includes('breath') || searchStr.includes('respiratory') || searchStr.includes('wheezing') || searchStr.includes('oxygen') || spo2 < 92) {
+    return ['Oxygen Ready', 'Ventilator on Standby', 'Respiratory Therapist Alerted', 'Nebulizer Prepared'];
+  }
+  if (searchStr.includes('stroke') || searchStr.includes('neuro') || searchStr.includes('seizure') || searchStr.includes('paralysis')) {
+    return ['CT Scan Ready', 'Neurologist Alerted', 'Stroke Team Activated', 'IV Access Secured'];
+  }
+  if (searchStr.includes('trauma') || searchStr.includes('accident') || searchStr.includes('fracture') || searchStr.includes('bleed')) {
+    return ['Blood Units Ready', 'Emergency Surgeon Alerted', 'Trauma Bed Prepared', 'Cross-match Ordered'];
+  }
+  if (temp > 38.5 || searchStr.includes('fever') || searchStr.includes('infection') || searchStr.includes('sepsis')) {
+    return ['Isolation Bed Prepared', 'IV Fluids Ready', 'Blood Cultures Ordered', 'Lab Samples Ready'];
+  }
+  if (riskScore >= 12) {
+    return ['ICU Bed Reserved', 'Continuous Monitoring Ready', 'Senior Clinician Alerted', 'Emergency Team On Standby'];
+  }
+  return ['Appropriate Bed Prepared', 'Clinical Team Notified', 'Patient Records Reviewed', 'Oxygen/Support Equipment Checked'];
+}
+
 /**
  * Normalizes backend responses into a unified referral model.
  */
@@ -249,8 +279,6 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
     caregiverFlags = raw.caregiverFlags;
   } else if (Array.isArray(raw.caregiverObservations) && raw.caregiverObservations.length > 0) {
     caregiverFlags = raw.caregiverObservations;
-  } else {
-    caregiverFlags = ['Breathing harder'];
   }
 
   const hospitalId = raw.hospitalId || 'dist-hospital-1';
@@ -286,14 +314,10 @@ export function normalizeReferral(raw: BackendReferral): NormalizedReferral {
   }
 
   // Recommended actions (preparation checklist)
+  const generatedActions = generateDynamicChecklistFrontend(raw);
   const recommendedActions = raw.recommendedActions && raw.recommendedActions.length > 0
     ? raw.recommendedActions
-    : [
-        'Prepare appropriate monitored bed/area',
-        'Check oxygen/support equipment availability',
-        'Alert receiving clinical team',
-        'Review referral information',
-      ];
+    : generatedActions;
 
   const checklistItems = Array.isArray(raw.checklistItems) && raw.checklistItems.length > 0
     ? raw.checklistItems
@@ -600,7 +624,7 @@ export async function dismissObservation(referralId: string, observationId: stri
   }
 }
 
-export async function createReferral(patient: Patient, caregiverFlags: string[] = ['Breathing harder']): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
+export async function createReferral(patient: Patient, caregiverFlags: string[] = []): Promise<{ success: boolean; isMock: boolean; data?: NormalizedReferral }> {
   const patientToken = `${patient.patientId || 'patient'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const newRaw: BackendReferral = {
     id: patient.referralRef || patient.patientId,
@@ -633,12 +657,7 @@ export async function createReferral(patient: Patient, caregiverFlags: string[] 
     hospitalId: 'dist-hospital-1',
     status: 'sent',
     eta: 75,
-    recommendedActions: [
-      'Prepare appropriate monitored bed/area',
-      'Check oxygen/support equipment availability',
-      'Alert receiving clinical team',
-      'Review referral information',
-    ],
+    recommendedActions: [],
   };
 
   // Add to in-memory list at top

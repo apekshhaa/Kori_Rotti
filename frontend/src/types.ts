@@ -16,6 +16,19 @@ export interface Vitals {
   respiratoryRate?: number; // breaths/min
 }
 
+export interface HourlyVitalEntry {
+  id: string;
+  timestamp: string; // human-readable, e.g. "10:32 AM"
+  isoTimestamp: string; // ISO string for sorting
+  heartRate: number;
+  spO2: number;
+  temperature: number;
+  tempUnit: '°F' | '°C';
+  systolicBp: number;
+  diastolicBp: number;
+  respiratoryRate: number;
+}
+
 export interface TrendReading {
   timestamp: string;
   pulse: number;
@@ -71,4 +84,5 @@ export interface Patient {
   historyScores: { time: string; score: number }[];
   recommendation: string;
   interventions?: Intervention[];
+  vitalsHistory?: HourlyVitalEntry[]; // Periodic vitals recordings (newest first)
 }

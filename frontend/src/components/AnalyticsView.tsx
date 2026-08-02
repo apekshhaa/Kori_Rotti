@@ -10,7 +10,6 @@ import {
   YAxis,
 } from 'recharts';
 import { Patient, TrendReading, Intervention, InterventionType, VitalKey } from '../types';
-import { TREND_PATIENT_DATA } from '../data/trendPatientData';
 import { predictTrend, TrendPrediction } from '../services/aiService';
 
 interface AnalyticsViewProps {
@@ -144,7 +143,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ title, icon, color, vitalKey, d
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, bottom: 10, left: -8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#382a33" vertical={false} />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#d7c8e3' }} />
+            <XAxis dataKey="id" axisLine={false} tickLine={false} tickFormatter={(value, index) => data[index]?.label || ''} tick={{ fontSize: 10, fill: '#d7c8e3' }} />
             <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
             <Tooltip content={<TrendChartTooltip />} />
             <Line
@@ -195,7 +194,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
   );
 
   const dataset = useMemo(() => {
-    return TREND_PATIENT_DATA.find((entry) => entry.patientId === selectedPatient?.patientId) || TREND_PATIENT_DATA[0];
+    return { interventions: selectedPatient?.interventions || [] };
   }, [selectedPatient]);
 
   const interventionSummary = useMemo(() => {
@@ -229,15 +228,37 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
   useEffect(() => {
     if (!selectedPatient) return;
 
+    const history = selectedPatient.vitalsHistory || [];
+    if (history.length < 3) {
+      setTrendReadings([]);
+      setPrediction(null);
+      setIsLoading(false);
+      setErrorMessage(null);
+      return;
+    }
+
     const loadPrediction = async () => {
       setIsLoading(true);
       setErrorMessage(null);
 
       try {
-        const allReadings = dataset?.readings || [];
-        const recentReadings = allReadings.slice(-3);
-        setTrendReadings(allReadings);
-        const result = await predictTrend(recentReadings, selectedPatient?.newsScore);
+        // Map HourlyVitalEntry -> TrendReading (ascending chronological order)
+        const mapped: TrendReading[] = [...history]
+          .reverse()
+          .map((entry) => ({
+            timestamp: entry.timestamp,
+            pulse: entry.heartRate,
+            bpSys: entry.systolicBp,
+            bpDia: entry.diastolicBp,
+            temperature: entry.temperature,
+            spo2: entry.spO2,
+            respiration: entry.respiratoryRate,
+            ews: selectedPatient.newsScore,
+          }));
+
+        const recentReadings = mapped.slice(-3);
+        setTrendReadings(mapped);
+        const result = await predictTrend(recentReadings, selectedPatient.newsScore);
         setPrediction(result);
       } catch (error) {
         setPrediction(null);
@@ -248,7 +269,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
     };
 
     loadPrediction();
-  }, [dataset, selectedPatient]);
+  }, [selectedPatient]);
 
   const vitalsDelta = useMemo(() => {
     if (!trendReadings.length) return { temp: 0, pulse: 0, spo2: 0, resp: 0 };
@@ -327,15 +348,64 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
     return [...readingItems, ...interventionItems].sort((a, b) => parseTimeValue(a.time) - parseTimeValue(b.time));
   }, [trendReadings, dataset.interventions]);
 
+  const handleGenerateReport = () => {
+    if (!selectedPatient) return;
+
+    let report = `CLINICAL TREND REPORT - ${selectedPatient.patientName}\n`;
+    report += `========================================================\n`;
+    report += `Patient ID: ${selectedPatient.patientId}\n`;
+    report += `Age/Gender: ${selectedPatient.age} / ${selectedPatient.gender}\n`;
+    report += `Current EWS: ${currentEWSValue} (${selectedPatient.riskLevel})\n`;
+    report += `Generated At: ${new Date().toLocaleString()}\n\n`;
+
+    report += `--- VITALS HISTORY (Last 3) ---\n`;
+    if (trendReadings.length === 0) {
+      report += `Not enough vitals recorded to generate trend.\n`;
+    } else {
+      trendReadings.forEach((reading) => {
+        report += `[${reading.timestamp}] Pulse: ${reading.pulse} | SpO2: ${reading.spo2}% | Temp: ${reading.temperature}C | BP: ${reading.bpSys}/${reading.bpDia} | Resp: ${reading.respiration}\n`;
+      });
+    }
+
+    report += `\n--- CLINICAL INSIGHTS ---\n`;
+    report += `Overall Call: ${summary.overall} / ${summary.clinicalCall}\n`;
+    report += `Recommendation: ${summary.recommendation}\n`;
+
+    if (prediction) {
+      report += `\n--- AI PREDICTION ---\n`;
+      report += `Predicted EWS (30m): ${prediction.predictedEWS30Min.toFixed(1)}\n`;
+      report += `Trend: ${prediction.trend} (Confidence: ${(prediction.confidence * 100).toFixed(1)}%)\n`;
+    }
+
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Clinical_Report_${selectedPatient.patientId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col w-full gap-5 animate-fadeIn pb-6">
       {/* Patient Carousel */}
       <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-4 rounded-2xl border border-[#eeedf7] dark:border-[#382a33]">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-extrabold text-white">Patient Trend Analysis</h2>
-          <span className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] bg-[#b50063]/10 rounded-full px-2 py-1">
-            3 reading window
-          </span>
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-extrabold text-white">Patient Trend Analysis</h2>
+            <span className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] bg-[#b50063]/10 rounded-full px-2 py-1">
+              3 reading window
+            </span>
+          </div>
+          <button 
+            onClick={handleGenerateReport}
+            className="flex items-center gap-2 bg-[#b50063] hover:bg-[#b50063]/80 text-white px-3 py-1.5 rounded-full text-[10px] font-bold transition-colors shadow-lg shadow-[#b50063]/20 border border-[#b50063]/30"
+          >
+            <span className="material-symbols-outlined text-[14px]">download</span>
+            Generate Report
+          </button>
         </div>
         <p className="text-xs text-[#e3bdc7] mb-4">
           Monitor whether a patient is improving or deteriorating over time, even when the EWS stays unchanged.
@@ -394,15 +464,32 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
         </div>
       </div>
 
-      {/* Vital Trend Charts Grid */}
+      {/* 3-Entry Gate OR Trend Charts */}
+      {(selectedPatient?.vitalsHistory ?? []).length < 3 ? (
+        <div className="bg-[#1a1b22]/50 dark:bg-[#221a1f] p-6 rounded-2xl border border-[#eeedf7] dark:border-[#382a33] flex flex-col items-center justify-center gap-3 text-center">
+          <span className="material-symbols-outlined text-4xl text-[#b50063] dark:text-[#ffb0c9]">bar_chart</span>
+          <h3 className="text-sm font-bold text-white">Trend Analysis Unavailable</h3>
+          <p className="text-xs text-[#e3bdc7] max-w-xs leading-relaxed">
+            A minimum of <strong className="text-white">3 vitals recordings</strong> are required before Trend Analysis can be generated.
+          </p>
+          <div className="mt-1 flex items-center gap-2 bg-[#b50063]/10 border border-[#b50063]/20 rounded-full px-4 py-2">
+            <span className="material-symbols-outlined text-sm text-[#ffb0c9]">monitor_heart</span>
+            <span className="text-xs font-bold text-[#ffb0c9]">
+              {(selectedPatient?.vitalsHistory ?? []).length} / 3 recordings
+            </span>
+          </div>
+          <p className="text-[10px] text-[#e3bdc7] opacity-70">Go to Assessments → Hourly Vitals to record entries.</p>
+        </div>
+      ) : (
+      <>{/* Vital Trend Charts Grid */}
       <div className="grid grid-cols-2 gap-3">
         <TrendChart
           title="Temperature"
           icon="thermometer"
           color="#b50063"
           vitalKey="temperature"
-          data={trendReadings.map((r) => ({ label: r.timestamp, value: r.temperature }))}
-          interventions={dataset.interventions}
+          data={trendReadings.map((r, i) => ({ id: i, label: r.timestamp, value: r.temperature }))}
+          interventions={selectedPatient?.interventions}
           delta={vitalsDelta.temp}
           worsening={vitalsDelta.temp > 1}
           unit="°C"
@@ -413,8 +500,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           icon="favorite"
           color="#b50063"
           vitalKey="pulse"
-          data={trendReadings.map((r) => ({ label: r.timestamp, value: r.pulse }))}
-          interventions={dataset.interventions}
+          data={trendReadings.map((r, i) => ({ id: i, label: r.timestamp, value: r.pulse }))}
+          interventions={selectedPatient?.interventions}
           delta={vitalsDelta.pulse}
           worsening={vitalsDelta.pulse > 10}
           unit="bpm"
@@ -425,8 +512,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           icon="humidity_mid"
           color="#00bfa5"
           vitalKey="spo2"
-          data={trendReadings.map((r) => ({ label: r.timestamp, value: r.spo2 }))}
-          interventions={dataset.interventions}
+          data={trendReadings.map((r, i) => ({ id: i, label: r.timestamp, value: r.spo2 }))}
+          interventions={selectedPatient?.interventions}
           delta={vitalsDelta.spo2}
           worsening={vitalsDelta.spo2 < 0}
           unit="%"
@@ -437,8 +524,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           icon="air"
           color="#ff9800"
           vitalKey="respiration"
-          data={trendReadings.map((r) => ({ label: r.timestamp, value: r.respiration }))}
-          interventions={dataset.interventions}
+          data={trendReadings.map((r, i) => ({ id: i, label: r.timestamp, value: r.respiration }))}
+          interventions={selectedPatient?.interventions}
           delta={vitalsDelta.resp}
           worsening={vitalsDelta.resp > 0}
           unit="/min"
@@ -470,9 +557,19 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
             <button
               type="button"
               onClick={() => {
-                const readings = dataset?.readings || [];
-                setTrendReadings(readings);
-                predictTrend(readings)
+                const history = selectedPatient?.vitalsHistory || [];
+                const mapped: TrendReading[] = [...history].reverse().map((e) => ({
+                  timestamp: e.timestamp,
+                  pulse: e.heartRate,
+                  bpSys: e.systolicBp,
+                  bpDia: e.diastolicBp,
+                  temperature: e.temperature,
+                  spo2: e.spO2,
+                  respiration: e.respiratoryRate,
+                  ews: selectedPatient?.newsScore ?? 0,
+                }));
+                setTrendReadings(mapped);
+                predictTrend(mapped)
                   .then(setPrediction)
                   .catch(() => setErrorMessage('Unable to fetch AI prediction.'));
               }}
@@ -539,6 +636,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ patients }) => {
           </div>
         </div>
       </div>
+      </>)}
     </div>
   );
 };

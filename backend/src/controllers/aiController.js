@@ -13,17 +13,30 @@ function generateMockPrediction(readings, currentRiskScore) {
     const ewsDelta = lastReading.ews - firstReading.ews;
     const pulseTrajectory = lastReading.pulse - firstReading.pulse;
     const spo2Trajectory = lastReading.spo2 - firstReading.spo2;
+    const tempTrajectory = lastReading.temperature - firstReading.temperature;
     
-    // Simple trend logic
+    // Evaluate clinical worsening or improving based on raw vitals
+    let worseningPoints = 0;
+    if (pulseTrajectory > 5) worseningPoints += 1;
+    if (spo2Trajectory < -1) worseningPoints += 1;
+    if (tempTrajectory > 0.5) worseningPoints += 1;
+    if (ewsDelta >= 1) worseningPoints += 2;
+    
+    let improvingPoints = 0;
+    if (pulseTrajectory < -5) improvingPoints += 1;
+    if (spo2Trajectory > 1) improvingPoints += 1;
+    if (tempTrajectory < -0.5) improvingPoints += 1;
+    if (ewsDelta <= -1) improvingPoints += 2;
+
     let trend = "Stable";
     let predictedEWS = lastReading.ews;
     
-    if (ewsDelta > 2) {
-        trend = "Increasing";
-        predictedEWS = lastReading.ews + Math.random() * 2; // Slightly higher
-    } else if (ewsDelta < -1) {
+    if (worseningPoints > improvingPoints) {
+        trend = "Worsening";
+        predictedEWS = lastReading.ews + 1 + Math.random() * 2; // Higher EWS
+    } else if (improvingPoints > worseningPoints) {
         trend = "Improving";
-        predictedEWS = Math.max(0, lastReading.ews - Math.random() * 1.5);
+        predictedEWS = Math.max(0, lastReading.ews - 1 - Math.random() * 1.5); // Lower EWS
     }
     
     // Confidence based on consistency

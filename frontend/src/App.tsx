@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavTab, Patient } from './types';
+import { NavTab, Patient, HourlyVitalEntry } from './types';
 import { INITIAL_PATIENTS } from './data/mockData';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -85,7 +85,7 @@ export default function App() {
   const handleSendReferral = async (patientId: string) => {
     const targetPatient = patients.find((p) => p.patientId === patientId);
     if (targetPatient) {
-      const result = await createReferral(targetPatient, targetPatient.caregiverFlags || ['Breathing harder']);
+      const result = await createReferral(targetPatient, targetPatient.caregiverFlags || []);
       if (result.success && result.data) {
         setPatients((prev) =>
           prev.map((p) =>
@@ -146,6 +146,16 @@ export default function App() {
     setActivePatientId(newPatient.patientId);
     setActiveTab('assessments');
     showToast(`Assessment created for ${newPatient.patientName} (Score ${newPatient.newsScore}/20)`);
+  };
+
+  const handleAddVitalEntry = (patientId: string, entry: HourlyVitalEntry) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.patientId === patientId
+          ? { ...p, vitalsHistory: [entry, ...(p.vitalsHistory || [])] }
+          : p
+      )
+    );
   };
 
   const handleStartAssessmentFromDashboard = () => {
@@ -221,6 +231,7 @@ export default function App() {
             onSendReferral={handleSendReferral}
             onDeletePatient={handleDeletePatient}
             onOpenNewAssessment={() => setIsNewModalOpen(true)}
+            onAddVitalEntry={handleAddVitalEntry}
           />
         )}
 

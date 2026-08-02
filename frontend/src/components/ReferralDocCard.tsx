@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Patient } from '../types';
+import { Patient, HourlyVitalEntry } from '../types';
 import { useTranslation } from '../i18n.tsx';
 import { CaregiverQrCard } from './hospital/CaregiverQrCard';
 
@@ -8,6 +8,7 @@ interface ReferralDocCardProps {
   onSendReferral: (patientId: string) => void;
   onDeletePatient: (patientId: string) => void;
   onSwitchToNewsView: () => void;
+  onAddVitalEntry: (entry: HourlyVitalEntry) => void;
 }
 
 export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
@@ -15,16 +16,47 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
   onSendReferral,
   onDeletePatient,
   onSwitchToNewsView,
+  onAddVitalEntry,
 }) => {
   const { t } = useTranslation();
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isSent, setIsSent] = useState(patient.referralSent);
+
+  // Hourly Vitals state
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const [vitalsFormData, setVitalsFormData] = useState({
+    heartRate: patient.vitals.heartRate,
+    spO2: patient.vitals.spO2,
+    temperature: patient.vitals.temperature,
+    tempUnit: patient.vitals.tempUnit,
+    systolicBp: patient.vitals.systolicBp,
+    diastolicBp: patient.vitals.diastolicBp ?? 80,
+    respiratoryRate: patient.vitals.respiratoryRate ?? 18,
+  });
   const caregiverReferral = {
     id: patient.referralRef?.replace(/^#/, '') || patient.patientId,
     referralId: patient.referralRef?.replace(/^#/, '') || patient.patientId,
     patientId: patient.patientId,
     patientToken: patient.referralRef?.replace(/^#/, '') || patient.patientId,
   } as any;
+
+  const handleRecordVitals = () => {
+    const now = new Date();
+    const entry: HourlyVitalEntry = {
+      id: `vital-${now.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isoTimestamp: now.toISOString(),
+      heartRate: Number(vitalsFormData.heartRate),
+      spO2: Number(vitalsFormData.spO2),
+      temperature: Number(vitalsFormData.temperature),
+      tempUnit: vitalsFormData.tempUnit as '°F' | '°C',
+      systolicBp: Number(vitalsFormData.systolicBp),
+      diastolicBp: Number(vitalsFormData.diastolicBp),
+      respiratoryRate: Number(vitalsFormData.respiratoryRate),
+    };
+    onAddVitalEntry(entry);
+    setShowVitalsForm(false);
+  };
 
   const handleSendReferralClick = () => {
     if (isSent || isTransmitting) return;
@@ -328,6 +360,152 @@ export const ReferralDocCard: React.FC<ReferralDocCardProps> = ({
         By clicking "Send Referral", you are electronically signing this document and initiating
         emergency logistics and medical registrar dispatch.
       </p>
+
+      {/* ── Hourly Vitals Section ── */}
+      <div className="flex flex-col gap-3 pt-2 border-t border-[#eeedf7] dark:border-[#382a33] mt-2">
+        {/* Section header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#b50063] dark:text-[#ffb0c9]">monitor_heart</span>
+            <h3 className="text-lg font-bold text-[#1a1b22] dark:text-[#f1effa]">Hourly Vitals</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowVitalsForm((prev) => !prev)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#b50063] hover:bg-[#a00057] text-white text-xs font-bold transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">{showVitalsForm ? 'close' : 'add'}</span>
+            <span>{showVitalsForm ? 'Cancel' : 'Record Vitals'}</span>
+          </button>
+        </div>
+
+        {/* Entry form */}
+        {showVitalsForm && (
+          <div className="flex flex-col gap-3 bg-[#f4f2fd] dark:bg-[#221a1f] rounded-2xl p-4 border border-[#eeedf7] dark:border-[#382a33]">
+            <span className="text-[10px] font-bold text-[#b50063] dark:text-[#ffb0c9] uppercase tracking-wider">New Vitals Entry — timestamp will be recorded automatically</span>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Heart Rate */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">Heart Rate (BPM)</label>
+                <input
+                  type="number"
+                  value={vitalsFormData.heartRate}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, heartRate: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+              {/* SpO2 */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">SpO₂ (%)</label>
+                <input
+                  type="number"
+                  value={vitalsFormData.spO2}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, spO2: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+              {/* Systolic BP */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">Systolic BP (mmHg)</label>
+                <input
+                  type="number"
+                  value={vitalsFormData.systolicBp}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, systolicBp: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+              {/* Diastolic BP */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">Diastolic BP (mmHg)</label>
+                <input
+                  type="number"
+                  value={vitalsFormData.diastolicBp}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, diastolicBp: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+              {/* Temperature */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">Temperature ({vitalsFormData.tempUnit})</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={vitalsFormData.temperature}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, temperature: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+              {/* Respiratory Rate */}
+              <div>
+                <label className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] block mb-1">Resp. Rate (/min)</label>
+                <input
+                  type="number"
+                  value={vitalsFormData.respiratoryRate}
+                  onChange={(e) => setVitalsFormData((prev) => ({ ...prev, respiratoryRate: Number(e.target.value) }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#1a1316] border border-[#eeedf7] dark:border-[#382a33] text-sm font-bold focus:outline-none focus:border-[#b50063]"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleRecordVitals}
+              className="w-full py-3 rounded-full bg-[#b50063] hover:bg-[#a00057] text-white text-sm font-bold shadow-lg shadow-[#b50063]/20 transition-all flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base">save</span>
+              Save Vitals Entry
+            </button>
+          </div>
+        )}
+
+        {/* History Log */}
+        {(patient.vitalsHistory ?? []).length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-6 rounded-2xl bg-[#f4f2fd] dark:bg-[#221a1f] border border-dashed border-[#eeedf7] dark:border-[#382a33]">
+            <span className="material-symbols-outlined text-3xl text-[#5b3f47] dark:text-[#e3bdc7]">history</span>
+            <p className="text-xs font-semibold text-[#5b3f47] dark:text-[#e3bdc7] text-center">
+              No vitals recorded yet.<br/>Use "Record Vitals" to add the first entry.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-bold text-[#5b3f47] dark:text-[#e3bdc7] uppercase tracking-wider">
+              {patient.vitalsHistory!.length} {patient.vitalsHistory!.length === 1 ? 'Entry' : 'Entries'} Recorded
+            </span>
+            {[...(patient.vitalsHistory ?? [])].reverse().map((entry) => (
+              <div
+                key={entry.id}
+                className="bg-[#f4f2fd] dark:bg-[#221a1f] rounded-2xl p-4 border border-[#eeedf7] dark:border-[#382a33] flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-[#b50063] dark:text-[#ffb0c9]">schedule</span>
+                  <span className="text-xs font-extrabold text-[#b50063] dark:text-[#ffb0c9]">{entry.timestamp}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[#5b3f47] dark:text-[#e3bdc7] font-medium">Heart Rate</span>
+                    <span className="text-sm font-bold text-[#1a1b22] dark:text-[#f1effa]">{entry.heartRate} <span className="text-[10px] font-normal">bpm</span></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[#5b3f47] dark:text-[#e3bdc7] font-medium">SpO₂</span>
+                    <span className={`text-sm font-bold ${entry.spO2 < 92 ? 'text-[#ba1a1a]' : 'text-[#1a1b22] dark:text-[#f1effa]'}`}>{entry.spO2}<span className="text-[10px] font-normal">%</span></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[#5b3f47] dark:text-[#e3bdc7] font-medium">Temp</span>
+                    <span className="text-sm font-bold text-[#1a1b22] dark:text-[#f1effa]">{entry.temperature}<span className="text-[10px] font-normal">{entry.tempUnit}</span></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[#5b3f47] dark:text-[#e3bdc7] font-medium">BP</span>
+                    <span className="text-sm font-bold text-[#1a1b22] dark:text-[#f1effa]">{entry.systolicBp}/{entry.diastolicBp} <span className="text-[10px] font-normal">mmHg</span></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[#5b3f47] dark:text-[#e3bdc7] font-medium">Resp. Rate</span>
+                    <span className="text-sm font-bold text-[#1a1b22] dark:text-[#f1effa]">{entry.respiratoryRate}<span className="text-[10px] font-normal">/min</span></span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

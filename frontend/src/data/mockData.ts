@@ -42,8 +42,8 @@ export const INITIAL_PATIENTS: Patient[] = [
     vitals: {
       heartRate: 72,
       spO2: 98,
-      temperature: 98.6,
-      tempUnit: '°F',
+      temperature: 37.0,
+      tempUnit: '°C',
       systolicBp: 120,
       diastolicBp: 80,
       respiratoryRate: 16,
@@ -70,8 +70,8 @@ export const INITIAL_PATIENTS: Patient[] = [
     vitals: {
       heartRate: 98,
       spO2: 94,
-      temperature: 99.8,
-      tempUnit: '°F',
+      temperature: 37.7,
+      tempUnit: '°C',
       systolicBp: 138,
       diastolicBp: 88,
       respiratoryRate: 20,

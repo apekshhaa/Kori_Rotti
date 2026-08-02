@@ -26,8 +26,8 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
   const [vitals, setVitals] = useState<Vitals>({
     heartRate: 110,
     spO2: 90,
-    temperature: 100.8,
-    tempUnit: '°F',
+    temperature: 38.2,
+    tempUnit: '°C',
     systolicBp: 140,
     diastolicBp: 90,
     respiratoryRate: 22,
@@ -60,6 +60,18 @@ export const NewAssessmentModal: React.FC<NewAssessmentModalProps> = ({
       referralSent: false,
       historyScores: [{ time: 'Just now', score: newsCalc.totalScore }],
       recommendation: newsCalc.recommendation,
+      vitalsHistory: [{
+        id: `vital-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isoTimestamp: new Date().toISOString(),
+        heartRate: vitals.heartRate,
+        spO2: vitals.spO2,
+        temperature: vitals.temperature,
+        tempUnit: vitals.tempUnit,
+        systolicBp: vitals.systolicBp,
+        diastolicBp: vitals.diastolicBp || 80,
+        respiratoryRate: vitals.respiratoryRate || 18,
+      }]
     };
 
     onSavePatient(newPatient);

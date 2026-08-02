@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AssessmentSubView, Patient } from '../types';
+import { AssessmentSubView, Patient, HourlyVitalEntry } from '../types';
 import { ReferralDocCard } from './ReferralDocCard';
 import { NewsBreakdownCard } from './NewsBreakdownCard';
 import { useTranslation } from '../i18n.tsx';
@@ -11,6 +11,7 @@ interface AssessmentsViewProps {
   onSendReferral: (patientId: string) => void;
   onDeletePatient: (patientId: string) => void;
   onOpenNewAssessment: () => void;
+  onAddVitalEntry: (patientId: string, entry: HourlyVitalEntry) => void;
 }
 
 export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
@@ -20,6 +21,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
   onSendReferral,
   onDeletePatient,
   onOpenNewAssessment,
+  onAddVitalEntry,
 }) => {
   const { t } = useTranslation();
   const [subView, setSubView] = useState<AssessmentSubView>('referral');
@@ -91,6 +93,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
           onSendReferral={onSendReferral}
           onDeletePatient={onDeletePatient}
           onSwitchToNewsView={() => setSubView('news')}
+          onAddVitalEntry={(entry) => onAddVitalEntry(selectedPatient.patientId, entry)}
         />
       ) : (
         <NewsBreakdownCard

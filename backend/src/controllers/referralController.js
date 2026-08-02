@@ -136,6 +136,36 @@ const {
 const { monitorReferral } = require("../services/hospitalCoordinator");
 const { generateCaregiverUrl } = require("../utils/publicUrl");
 
+function generateDynamicChecklist(raw) {
+    const diagnosis = (raw.diagnosis || '').toLowerCase();
+    const caregiverFlags = Array.isArray(raw.caregiverFlags) ? raw.caregiverFlags.join(' ').toLowerCase() : '';
+    const needs = Array.isArray(raw.patientNeeds) ? raw.patientNeeds.join(' ').toLowerCase() : '';
+    const searchStr = `${diagnosis} ${caregiverFlags} ${needs}`;
+    const riskScore = raw.riskScore ?? raw.risk?.score ?? raw.newsScore ?? 0;
+    const temp = raw.vitals?.temperature ?? raw.vitals?.temp ?? 37;
+    const spo2 = raw.vitals?.spo2 ?? raw.vitals?.spO2 ?? 98;
+
+    if (searchStr.includes('chest') || searchStr.includes('cardiac') || searchStr.includes('heart') || searchStr.includes('ecg') || searchStr.includes('cardiolog')) {
+        return ['Cardiac Monitor Ready', 'ECG Machine Ready', 'Defibrillator Ready', 'Cardiologist Alerted', 'IV Access Secured'];
+    }
+    if (searchStr.includes('breath') || searchStr.includes('respiratory') || searchStr.includes('wheezing') || searchStr.includes('oxygen') || spo2 < 92) {
+        return ['Oxygen Ready', 'Ventilator on Standby', 'Respiratory Therapist Alerted', 'Nebulizer Prepared'];
+    }
+    if (searchStr.includes('stroke') || searchStr.includes('neuro') || searchStr.includes('seizure') || searchStr.includes('paralysis')) {
+        return ['CT Scan Ready', 'Neurologist Alerted', 'Stroke Team Activated', 'IV Access Secured'];
+    }
+    if (searchStr.includes('trauma') || searchStr.includes('accident') || searchStr.includes('fracture') || searchStr.includes('bleed')) {
+        return ['Blood Units Ready', 'Emergency Surgeon Alerted', 'Trauma Bed Prepared', 'Cross-match Ordered'];
+    }
+    if (temp > 38.5 || searchStr.includes('fever') || searchStr.includes('infection') || searchStr.includes('sepsis')) {
+        return ['Isolation Bed Prepared', 'IV Fluids Ready', 'Blood Cultures Ordered', 'Lab Samples Ready'];
+    }
+    if (riskScore >= 12) {
+        return ['ICU Bed Reserved', 'Continuous Monitoring Ready', 'Senior Clinician Alerted', 'Emergency Team On Standby'];
+    }
+    return ['Appropriate Bed Prepared', 'Clinical Team Notified', 'Patient Records Reviewed', 'Oxygen/Support Equipment Checked'];
+}
+
 // Update checklist items (completed) from hospital UI
 const updateReferralChecklist = async (req, res) => {
     try {
@@ -192,13 +222,7 @@ const createReferral = async (req, res) => {
 
             // AI monitor inputs
             acknowledgementDeadline: req.body.acknowledgementDeadline || Date.now() + 10 * 60 * 1000,
-            checklistItems: req.body.checklistItems || [
-                "ICU Bed Available",
-                "Oxygen Ready",
-                "Blood Available",
-                "Respiratory Technician Available",
-                "Ventilator Ready"
-            ],
+            checklistItems: req.body.checklistItems || generateDynamicChecklist(req.body),
             completedChecklist: req.body.completedChecklist || [],
             requiredResources: req.body.requiredResources || ["icu", "oxygen", "blood", "doctor"],
 
